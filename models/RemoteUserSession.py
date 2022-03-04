@@ -1,4 +1,4 @@
-class UserSession:
+class RemoteUserSession:
     def __init__(self, managingServerID ):
         self._managingServerID = managingServerID
 
