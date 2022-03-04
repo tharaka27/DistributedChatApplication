@@ -1,0 +1,4 @@
+server_name : Distributed systems
+address : localhost
+client_port : 8080
+coordinator_port : 6060
