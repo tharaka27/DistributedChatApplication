@@ -3,17 +3,27 @@ from models.configuration import ServerConfiguration
 class FileReader:
 
     def populate(self,File_name):
+
+        # read data from configuration file
         config_f = open(File_name,"r")
         data = config_f.readlines()
-        database = {}
-        
-        for d in data:
-            info = d.split(":")
-            id = info[0].strip()
-            value = info[1].strip()
-            database[id] = value
-        
-        config_object = ServerConfiguration(database["server_name"],database["address"],database["client_port"],database["coordinator_port"])
+        config_f.close()
 
-        return config_object
+        servers = []
+
+        for server_data in data:
+            d = server_data.strip().split()
+            servers.append(d)
+        
+        # create server configuration objects
+
+        server_config_objs = []
+
+        for each in servers:
+
+            obj = ServerConfiguration(each[0],each[1],each[2],each[3])
+            server_config_objs.append(obj)
+
+        return server_config_objs
+
         
