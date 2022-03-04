@@ -8,8 +8,8 @@ def main():
     #test_chatroominfo.test()
     #test_configuration.test()
     #test_localroominfo.test()
-    test_remoteroominfo.test()
-    #test_fileReader.test()
+    #test_remoteroominfo.test()
+    test_fileReader.test()
 
 
 if __name__ == "__main__":
