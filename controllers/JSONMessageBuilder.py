@@ -2,6 +2,7 @@ from asyncio.windows_events import NULL
 import json
 from re import A
 from time import time
+from tkinter import N
 
 
 class MessageBuilder:
@@ -138,12 +139,16 @@ class MessageBuilder:
         data[Protocol.identity.name] = userId
         return json.dumps(data)
 
-    def lockIdentity( userId):
+    def lockIdentity( userId, serverID = None, roomId = None,locked = None):
         # send peer server {"type" : "lockidentity", "serverid" : "s1", "identity" : "Adel"}
         data = {}
         data[Protocol.typeS.name] = Protocol.lockidentity.name
         #data[Protocol.serverid.name] = serverInfo.getServerId()
         data[Protocol.identity.name] = userId
+
+        if serverID != None and roomId != None and locked != None:
+            data[Protocol.roomid.name] = roomId
+            data[Protocol.locked.name] = locked
         return json.dumps(data)
 
     def newIdentityResp( approve):
@@ -162,7 +167,75 @@ class MessageBuilder:
         return json.dumps(data)
     
 
+    def listRoomsClient():
+        
+        data = {}
+        data[Protocol.typeS.name] = Protocol.list.name
+        return json.dumps(data)
+
+    def authResponse( success,  reason):
+        #{"type":"authresponse", "success":"false", "reason":"null"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.authresponse.name
+        data[Protocol.success.name] = success
+        data[Protocol.reason.name] = reason
+        return json.dumps(data)
+
+    def notifyUserSession( username,  sessionId,  status):
+        # {"type" : "notifyusersession", "username" : "ray", "sessionid" : "ba64077b-85b4-40f0-a5ac-480ad3e341b3", "serverid", "s1", "status", "login"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.notifyusersession.name
+        data[Protocol.username.name] = username
+        data[Protocol.sessionid.name] = sessionId
+        #data[Protocol.serverid.name] = serverInfo.getServerId()
+        data[Protocol.status.name] = status
+        return json.dumps(data)
     
+    
+    def makeLoginMessage( username,  password):
+        # {"type" : "authenticate", "username" : "ray@example.com", "password":"cheese", "rememberme":"true"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.authenticate.name
+        data[Protocol.username.name] = username
+        data[Protocol.password.name] = password
+        data[Protocol.rememberme.name] = "false"
+        return json.dumps(data)
+    
+    def notifyServerDownMessage( serverId):
+        # {"type":"notifyserverdown", "serverid":"s2"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.notifyserverdown.name
+        data[Protocol.serverid.name] = serverId
+        return json.dumps(data)
+
+    def serverUpMessage():
+        data = {}
+        data[Protocol.typeS.name] = Protocol.serverup.name
+        #data[Protocol.serverid.name] = serverInfo.getServerId()
+        #data[Protocol.address.name] = serverInfo.getAddress()
+        #data[Protocol.port.name] = serverInfo.getPort()
+        #data[Protocol.managementport.name] = serverInfo.getManagementPort()
+        return json.dumps(data)
+    
+    def startElectionMessage( serverId,  serverAddress,  serverPort = 0, 
+            serverManagementPort = 0):
+        data = {}
+        data[Protocol.typeS.name] = Protocol.startelection.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.address.name] = serverAddress
+        data[Protocol.port.name] = str(serverPort)
+        data[Protocol.managementport.name] = str(serverManagementPort)
+        return json.dumps(data)
+
+    def electionAnswerMessage( serverId,  serverAddress,  serverPort,
+            serverManagementPort ):
+        data = {}
+        data[Protocol.typeS.name] = Protocol.answerelection.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.address.name] = serverAddress
+        data[Protocol.port.name] = str(serverPort)
+        data[Protocol.managementport.name] = str(serverManagementPort)
+        return json.dumps(data)
 
     def __init__(self,serverState, serverInfo):
        
@@ -180,13 +253,13 @@ import enum
     , 
     
     , 
-    locked, , 
+    , , 
     , 
     , 
     , 
     ,
-    listOf, 
-    quitOf, 
+    , 
+    quit, 
     who, 
     , 
     , 
@@ -203,11 +276,9 @@ import enum
     movejoin
     
     listserver, , , ,
-    authenticate, , rememberme, authresponse, success, reason,
-    , notifyusersession, status, alive, managementport, serverup, notifyserverdown,
+    , , , alive, , , ,
     , gossip, heartbeatcountlist, startvote, answervote, vote, votedby, suspectserverid,
-    startelection, answerelection, coordinator, iamup, viewelection, nominationelection,
-    currentcoordinatorid, currentcoordinatoraddress, currentcoordinatorport, currentcoordinatormanagementport'''
+    , , '''
 class Protocol(enum.Enum):
     typeS = 1
     approved = 2
@@ -249,4 +320,37 @@ class Protocol(enum.Enum):
     lockidentity = 28
 
     newidentity = 29
-    former = 30
+
+    roomchange = 30
+    former = 31
+
+    locked = 32
+    list = 33
+
+    authresponse = 34
+    success = 35
+    reason = 36
+
+    notifyusersession = 37
+    status = 38
+
+    authenticate = 39
+    rememberme = 40
+
+    notifyserverdown = 41
+
+    serverup = 42
+    managementport = 43
+
+    startelection = 44
+    answerelection = 45
+
+    coordinator = 46
+    iamup = 47 
+    viewelection = 48 
+    nominationelection = 49
+    currentcoordinatorid = 50 
+    currentcoordinatoraddress = 51 
+    currentcoordinatorport = 52 
+    currentcoordinatormanagementport = 53
+
