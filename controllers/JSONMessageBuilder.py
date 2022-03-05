@@ -71,7 +71,7 @@ class MessageBuilder:
     def lockRoom( roomId):
         #{"type" : "lockroomid", "serverid" : "s1", "roomid" : "jokes"}
         data = {}
-        data[Protocol.typeS.name] = Protocol.releaseroomid.name
+        data[Protocol.typeS.name] = Protocol.lockroomid.name
         #data[Protocol.serverid.name] = serverInfo.getServerID()
         data[Protocol.roomid.name] = roomId
         return json.dumps(data)
@@ -282,6 +282,24 @@ class MessageBuilder:
         data[Protocol.port.name] = str(serverPort)
         data[Protocol.managementport.name] = str(serverManagementPort)
         return json.dumps(data)
+
+    def viewMessage( coordinatorId,  coordinatorAddress,  coordinatorPort, 
+            coordinatorManagementPort):
+        # {"type":"viewelection", "currentcoordinatorid":"1", "currentcoordinatoraddress":"localhost",
+        #      "currentcoordinatorport":"4444", "currentcoordinatormanagementport":"5555"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.viewelection.name
+        data[Protocol.currentcoordinatorid.name] = coordinatorId
+        data[Protocol.currentcoordinatoraddress.name] = coordinatorAddress
+        data[Protocol.currentcoordinatorport.name] = str(coordinatorPort)
+        data[Protocol.currentcoordinatormanagementport.name] = str(coordinatorManagementPort)
+        return json.dumps(data)
+
+    def nominationMessage():
+        data = {}
+        data[Protocol.typeS.name] = Protocol.nominationelection.name
+        return json.dumps(data)
+    
     def __init__(self,serverState, serverInfo):
        
         if MessageBuilder.__instance != None:
@@ -311,7 +329,7 @@ import enum
     , 
     , 
     ,
-    lockroomid, 
+    , 
     , , 
     , 
     
@@ -405,4 +423,5 @@ class Protocol(enum.Enum):
     vote = 60
     votedby = 61
     suspectserverid = 62
+    lockroomid = 63
 
