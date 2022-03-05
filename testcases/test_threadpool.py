@@ -14,14 +14,14 @@ def our_process(a):
 
 
 # Our function to handle thrown exceptions from 'our_process' logic.
-def execption_handler(thread_name, exception):
+def exception_handler(thread_name, exception):
     print(f'{thread_name}: {exception}')
 
 
 def test():
     # create a queue & pool.
     q = Queue()
-    p = Executor_pool(name='Pool_1', queue=q, max_workers=4, wait_queue=False, exception_handler=execption_handler)
+    p = Executor_pool(name='Pool_1', queue=q, max_workers=4, wait_queue=False, exception_handler=exception_handler)
 
     # adding some tasks the the queue.
     for i in range(10):
