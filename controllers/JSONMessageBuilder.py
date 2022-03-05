@@ -236,7 +236,52 @@ class MessageBuilder:
         data[Protocol.port.name] = str(serverPort)
         data[Protocol.managementport.name] = str(serverManagementPort)
         return json.dumps(data)
+    
+    def setCoordinatorMessage( serverId,  serverAddress,  serverPort, 
+            serverManagementPort):
+        data = {}
+        data[Protocol.typeS.name] = Protocol.coordinator.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.address.name] = serverAddress
+        data[Protocol.port.name] = str(serverPort)
+        data[Protocol.managementport.name] = str(serverManagementPort)
+        return json.dumps(data)
 
+    def gossipMessage( serverId, heartbeatCountList):
+        # {"type":"gossip","serverid":"1","heartbeatcountlist":{"1":0,"2":1,"3":1,"4":2}}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.gossip.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.heartbeatcountlist.name] = heartbeatCountList
+        return json.dumps(data)
+
+    def startVoteMessage( serverId,  suspectServerId):
+        data = {}
+        data[Protocol.typeS.name] = Protocol.startvote.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.suspectserverid.name] = suspectServerId
+        return json.dumps(data)
+
+    def answerVoteMessage( suspectServerId,  vote,  votedBy):
+        # {"type":"answervote","suspectserverid":"1","vote":"YES", "votedby":"1"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.answervote.name
+        data[Protocol.suspectserverid.name] = suspectServerId
+        data[Protocol.votedby.name] = votedBy
+        data[Protocol.vote.name] = vote
+        return json.dumps(data)
+    
+    
+    def iAmUpMessage( serverId,  serverAddress,  serverPort, 
+            serverManagementPort):
+        # {"type":"iamup", "serverid":"1", "address":"localhost", "port":"4444", "managementport":"5555"}
+        data = {}
+        data[Protocol.typeS.name] = Protocol.iamup.name
+        data[Protocol.serverid.name] = serverId
+        data[Protocol.address.name] = serverAddress
+        data[Protocol.port.name] = str(serverPort)
+        data[Protocol.managementport.name] = str(serverManagementPort)
+        return json.dumps(data)
     def __init__(self,serverState, serverInfo):
        
         if MessageBuilder.__instance != None:
@@ -275,9 +320,7 @@ import enum
     
     movejoin
     
-    listserver, , , ,
-    , , , alive, , , ,
-    , gossip, heartbeatcountlist, startvote, answervote, vote, votedby, suspectserverid,
+    
     , , '''
 class Protocol(enum.Enum):
     typeS = 1
@@ -353,4 +396,13 @@ class Protocol(enum.Enum):
     currentcoordinatoraddress = 51 
     currentcoordinatorport = 52 
     currentcoordinatormanagementport = 53
+    listserver = 54
+    alive = 55
+    gossip = 56 
+    heartbeatcountlist= 57 
+    startvote = 58
+    answervote = 59
+    vote = 60
+    votedby = 61
+    suspectserverid = 62
 
