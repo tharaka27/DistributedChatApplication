@@ -31,7 +31,7 @@ class ServerConfiguration:
     def setCoordinationPort(self, coordination_port):
         return self._coordination_port
 
-    def resolveServerAddress(self, server_address :str):
+    def resolveServerAddress(self, server_address):
         if server_address == "localhost":
             return LOCAL_HOST_ADDRESS
         else:
