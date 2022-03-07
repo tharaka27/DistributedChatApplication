@@ -36,3 +36,8 @@ class ServerConfiguration:
             return LOCAL_HOST_ADDRESS
         else:
             return server_address
+
+    def __repr__(self):
+        return "name: " + self._server_name + " address:" + self._address \
+            + " client port:" + self._client_port + " coordiantion port:" + \
+                self._coordination_port

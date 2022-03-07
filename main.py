@@ -1,8 +1,9 @@
 #from testcases import test_threadpool, test_chatroominfo , test_configuration, test_localroominfo, test_remoteroominfo, test_fileReader
 from flask import Flask, jsonify, request
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
+from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
+from utilities.fileReader import FileReader
 
-# creating a Flask app
 app = Flask(__name__)
 
 # on the terminal type: curl http://127.0.0.1:5000/
@@ -21,7 +22,26 @@ def home():
         else:
             return jsonify({ "data" : "wrong protocol.please check again" })
 
+@app.before_first_request
+def Initialization():
+    LOCAL_SERVER_NAME = "s2"
+    
+    f = FileReader()
+    config_objects = f.populate("configuration.txt")
+    for i in config_objects:
+        if i.getServerName() == LOCAL_SERVER_NAME:
+            LOCAL_SERVER_CONFIGURATION = i
+        else:
+            REMOTE_SERVER_CONFIGURATIONS.append(i)
+
+
+    print("Initializing server with.....")   
+    print("Local server configuration")
+    print( LOCAL_SERVER_CONFIGURATION )
+    print("Remote server configurations")
+    print( REMOTE_SERVER_CONFIGURATIONS)
+
 
 # driver function
 if __name__ == '__main__':
-	app.run(debug = True)
+    app.run(debug=True)
