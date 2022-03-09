@@ -7,7 +7,8 @@ from .userSession import UserSession
 
 
 # create this server's configuration
-LOCAL_SERVER_CONFIGURATION = ServerConfiguration("DEFAULT", "localhost", "5000", "5000")
+global LOCAL_SERVER_CONFIGURATION 
+LOCAL_SERVER_CONFIGURATION = ServerConfiguration("DEFAULT", "localhost", "5000", "5000", "5000", 1)
 
 # list of configurations of other servers 
 REMOTE_SERVER_CONFIGURATIONS = []

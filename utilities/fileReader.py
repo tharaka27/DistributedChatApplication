@@ -21,7 +21,7 @@ class FileReader:
 
         for each in servers:
 
-            obj = ServerConfiguration(each[0],each[1],each[2],each[3])
+            obj = ServerConfiguration(each[0],each[1],each[2],each[3], each[4], int(each[5]))
             server_config_objs.append(obj)
 
         return server_config_objs

@@ -3,7 +3,8 @@ from flask import Flask, jsonify, request
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
 from utilities.fileReader import FileReader
-
+from algorithms.fastbully import Bully
+import os
 app = Flask(__name__)
 
 # on the terminal type: curl http://127.0.0.1:5000/
@@ -24,11 +25,13 @@ def home():
 
 @app.before_first_request
 def Initialization():
-    LOCAL_SERVER_NAME = "s2"
+    LOCAL_SERVER_NAME = os.environ.get('s')
     
     f = FileReader()
     config_objects = f.populate("configuration.txt")
     for i in config_objects:
+
+        print("Setting ->" + i.getServerName() + i.getAddress() + ":" + str(i.getHeartPort()))
         if i.getServerName() == LOCAL_SERVER_NAME:
             LOCAL_SERVER_CONFIGURATION = i
         else:
@@ -41,7 +44,10 @@ def Initialization():
     print("Remote server configurations")
     print( REMOTE_SERVER_CONFIGURATIONS)
 
+    bully  = Bully(LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS)
+    bully.run()
+
 
 # driver function
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=int(os.environ.get('port')))

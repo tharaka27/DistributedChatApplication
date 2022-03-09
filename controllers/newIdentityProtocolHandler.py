@@ -1,6 +1,6 @@
-from JSONMessageBuilder import MessageBuilder
 from models.serverstate import LOCAL_USERS
 from models.userSession import UserSession
+from controllers.JSONMessageBuilder import MessageBuilder
 
 class newIdentityProtocolHandler:
     def __init__(self, json_data):
