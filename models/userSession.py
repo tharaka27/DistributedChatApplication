@@ -23,3 +23,9 @@ class UserSession:
         self._status = status
     def setPassword(self, password):
         self._password = password
+
+    def __str__(self):
+        return self._userName
+
+    def __repr__(self):
+        return self._userName
