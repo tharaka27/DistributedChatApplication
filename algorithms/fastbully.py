@@ -11,7 +11,7 @@ import random
 class Bully:
 
     global Fast_enabled, coord_dead, election_started
-    Fast_enabled = True
+    Fast_enabled = False
     coord_dead = False
     election_started = False
     _instance = None
@@ -34,6 +34,7 @@ class Bully:
             print(p)
             if self.max_id < p.getId():
                 self.max_id = p.getId()
+        print("[Configuration] ip:{} coor:{} heart:{}".format(self.address, self.port, self.heart_port))
     
     @staticmethod
     def getInstance():
@@ -54,12 +55,20 @@ class Bully:
             if p.getId() != self.id:
                 self.heart_socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getHeartPort()))
 
+    def connect_to_coordinator(self):
+        for p in self.processes:
+            # Connect to coordinator
+            if p.getId() == int(self.coor_id) and not(p.getId() == int(self.id)):
+                print("[INFO] connected to tcp://{}:{}".format(p.getAddress(), p.getCoordinationPort()) )
+                self.socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
+        
+
     def establish_connection(self, TIMEOUT):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         self.socket.bind('tcp://{}:{}'.format(self.address, self.port))
         self.socket2 = self.context.socket(zmq.REQ)
-        self.socket2.setsockopt(zmq.RCVTIMEO, TIMEOUT)
+        self.socket2.setsockopt(zmq.RCVTIMEO, TIMEOUT) #TIMEOUT
         self.connect_to_higher_ids()
         self.heart_context = zmq.Context()
         self.heart_socket = self.heart_context.socket(zmq.PUB)
@@ -84,8 +93,12 @@ class Bully:
                 message = {'type' : 'alive', 'address': self.address, \
                     'port': self.heart_port, 'id': self.id }
                 self.heart_socket.send_string(json.dumps(message))
+                
                 if election_started:
                     election_started = False  
+                
+                serverstate.AMICOORDINATOR = True
+                serverstate.ISCOORDINATORALIVE = True
                 time.sleep(1)
         else:
             while True:
@@ -101,7 +114,7 @@ class Bully:
                         if(request['type'] == "alive"):
                             print("coordinator  {}".format(coor_heart_beat))
                             serverstate.ISCOORDINATORALIVE = True
-                            self.update_coor(request['address'], request['port'], request['id']) 
+                            self.update_coor(request['address'], request['port'], int(request['id'])) 
                             if election_started:
                                 election_started = False   
 
@@ -118,8 +131,9 @@ class Bully:
                     else:
                         if request['id'] > self.id:
                             print("coordinator  {}".format(coor_heart_beat))
-                            self.update_coor(request['address'], request['port'], request['id'])
+                            self.update_coor(request['address'], request['port'], int(request['id']))
                             serverstate.ISCOORDINATORALIVE = True
+                            serverstate.AMICOORDINATOR = False
                 
                 except:
                     if Fast_enabled:
@@ -146,7 +160,10 @@ class Bully:
                             print("Coordinator is dead, get ready for election \n")
                             self.coor_id = -1
                             serverstate.ISCOORDINATORALIVE = False
+                            serverstate.AMICOORDINATOR = False
                         
+    
+    '''
     def start_election(self):
 
         #self.declare_am_coordinator()
@@ -158,7 +175,7 @@ class Bully:
         while (not coordinator_found):
 
             if self.id == self.max_id:
-                print(" iam the highest")
+                print(" i am the highest")
                 self.declare_am_coordinator()
                 coordinator_found = True
                 serverstate.ISCOORDINATORALIVE = True
@@ -200,6 +217,8 @@ class Bully:
                     self.declare_am_coordinator()
                     coordinator_found = True
         return True
+    '''
+    
 
 
     def run_server(self):
@@ -221,7 +240,7 @@ class Bully:
                         message = {'type' : 'coordinator','id': self.id}
                         self.socket.send_string(json.dumps(message))
                         self.declare_am_coordinator()
-
+                '''
                 elif req['type'] == 'create_identity' and self.id == self.coor_id:
                     print("Received create_identity task")
                     if req["identity"] in serverstate.ALL_USERS :
@@ -234,15 +253,44 @@ class Bully:
                         print("[Request] Create a new identity", req["identity"], " .successful")
                         serverstate.ALL_USERS.append(req["identity"])
                         self.socket.send_string(json.dumps(message))
+                '''
 
     
         else:
-
             while True:
-                request = self.socket.recv_string()
-                if request.startswith('election'):
-                    #respond alive..
-                    self.socket.send_string('alive')
+                try:
+                    request = self.socket.recv_string()
+                    print("[Info] A new packat received.")
+                    if request.startswith('election'):
+                        print("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjj respond alive")
+                        self.socket.send_string('alive')
+                        continue
+
+                    req = json.loads(request)
+                    if req['type'] == 'create_identity' and self.id == self.coor_id:
+                        print("Received create_identity task")
+                        if req["identity"] in serverstate.ALL_USERS :
+                            print("[Request] Create a new identity", req["identity"], " .Unsuccessful")
+                            message = { "type" : "create_identity_done" ,"approved": "False"}
+                            self.socket.send_string(json.dumps(message))
+                        else:
+                            message = { "type" : "create_identity_done" ,"approved": "True"}
+                            print("[Request] Create a new identity", req["identity"], " .successful")
+                            serverstate.ALL_USERS.append(req["identity"])
+                            self.socket.send_string(json.dumps(message)) 
+                    else:
+                        message = { "type" : "error message" }
+                        self.socket.send_string(json.dumps(message))
+
+                except json.decoder.JSONDecodeError as e:
+                    print("[Warning] Trying to decode election message")
+                
+                except zmq.ZMQError as e:
+                    
+                    self.socket.close()
+                    self.socket = self.context.socket(zmq.REP)
+                    self.socket.bind('tcp://{}:{}'.format(self.address, self.port))
+                
     
     def declare_am_coordinator(self):
         print('I am the coordinator')
@@ -266,6 +314,7 @@ class Bully:
                    if result:
                        coord_dead = False
 
+                '''
                 # if not empty send message
                 if not(len(self.send_buffer) == 0 or self.coor_id == -1):
                     message = self.send_buffer.pop(0)
@@ -282,6 +331,7 @@ class Bully:
                             self.send_buffer.append(message)
                         else:
                             print(e)
+                '''
 
                 time.sleep(1)
 
@@ -296,11 +346,32 @@ class Bully:
                             req = self.socket2.recv_string()
                     except:
                         self.declare_am_coordinator()
-                        
+
+                 # if not empty send message
+                if not(len(self.send_buffer) == 0 or self.coor_id == -1):
+                    message = self.send_buffer.pop(0)
+                    print("[INFO] Trying to send message", message)
+                    self.connect_to_coordinator()
+                    self.socket2.setsockopt(zmq.RCVTIMEO, 2000) #TIMEOUT
+                    try:
+                        self.socket2.send_string(json.dumps(message), encoding='utf-8')
+                        request = self.socket2.recv_string()
+                        self.receive_buffer.append(request)
+                        print("receive complete")
+                    except zmq.ZMQError as e:
+                        self.socket2.close()
+                        self.socket2 = self.context.socket(zmq.REQ)
+                        if e.errno == zmq.EAGAIN:
+                            self.send_buffer.append(message)
+                        else:
+                            print(e)
+                            time.sleep(1)
+                            self.send_buffer.append(message)
+
                 time.sleep(1)
 
     def run(self):
-        self.establish_connection(2000)
+        self.establish_connection(5000)
 
         heart_beats_thread = threading.Thread(target=self.heart_beats, args=[])
         heart_beats_thread.start()

@@ -48,7 +48,7 @@ class newIdentityProtocolHandler:
             print("[Received]", end="")
             message = json.loads(self._bully_instance.receive_buffer.pop(0))
             print(message)
-            if message["approved"] :
+            if message["approved"] == "True" :
                 serverstate.ALL_USERS.append(self._name)
                 serverstate.LOCAL_USERS.append(self._name)
                 return jsonify({ "type" : "newidentity" ,"approved": "True"})
