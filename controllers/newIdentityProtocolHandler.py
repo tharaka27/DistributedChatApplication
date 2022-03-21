@@ -29,6 +29,7 @@ class newIdentityProtocolHandler:
 
             else:
                 serverstate.ALL_USERS.append(self._name)
+                serverstate.LOCAL_USERS.append(self._name)
                 return jsonify({ "type" : "newidentity" ,"approved": "True"})
 
         else:
