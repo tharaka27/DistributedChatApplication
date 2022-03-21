@@ -3,7 +3,8 @@ import time
 import parse
 import sys
 import threading
-from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
+#from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
+from models import serverstate
 import json
 import random
 
@@ -13,23 +14,36 @@ class Bully:
     Fast_enabled = True
     coord_dead = False
     election_started = False
+    _instance = None
 
-    def __init__(self, LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS):
-        self.max_id = LOCAL_SERVER_CONFIGURATION.getId()
-        self.address = LOCAL_SERVER_CONFIGURATION.getAddress()
-        self.port = LOCAL_SERVER_CONFIGURATION.getCoordinationPort()
-        self.heart_port = LOCAL_SERVER_CONFIGURATION.getHeartPort()
-        self.processes = REMOTE_SERVER_CONFIGURATIONS
-        self.id = LOCAL_SERVER_CONFIGURATION.getId()
+    def __init__(self):
+        if Bully._instance != None:
+            raise Exception("This is a singleton class") 
+        else:
+            Bully._instance = self
+        self.max_id = serverstate.LOCAL_SERVER_CONFIGURATION.getId()
+        self.address =  serverstate.LOCAL_SERVER_CONFIGURATION.getAddress()
+        self.port = serverstate.LOCAL_SERVER_CONFIGURATION.getCoordinationPort()
+        self.heart_port = serverstate.LOCAL_SERVER_CONFIGURATION.getHeartPort()
+        self.processes = serverstate.REMOTE_SERVER_CONFIGURATIONS
+        self.id = serverstate.LOCAL_SERVER_CONFIGURATION.getId()
         self.coor_id = -1
+        self.send_buffer = []
+        self.receive_buffer = []
         for p in self.processes:
             print(p)
             if self.max_id < p.getId():
                 self.max_id = p.getId()
-        print("---------------------\n Max ID is" + str(self.max_id))
+    
+    @staticmethod
+    def getInstance():
+        if Bully._instance == None:
+            Bully()
+        return Bully()._instance
 
     def connect_to_higher_ids(self):
         for p in self.processes:
+            # changed to connect all
             if p.getId() > int(self.id):
                 self.socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
         # so that last process does not block on send...
@@ -86,6 +100,7 @@ class Bully:
                          # if heart beat message
                         if(request['type'] == "alive"):
                             print("coordinator  {}".format(coor_heart_beat))
+                            serverstate.ISCOORDINATORALIVE = True
                             self.update_coor(request['address'], request['port'], request['id']) 
                             if election_started:
                                 election_started = False   
@@ -94,6 +109,7 @@ class Bully:
                         elif (request['type'] == "dead"):
                             print("election is in process...")
                             election_started = True
+                            serverstate.ISCOORDINATORALIVE = False
 
                         else:
                             print("Unkown message")
@@ -103,6 +119,7 @@ class Bully:
                         if request['id'] > self.id:
                             print("coordinator  {}".format(coor_heart_beat))
                             self.update_coor(request['address'], request['port'], request['id'])
+                            serverstate.ISCOORDINATORALIVE = True
                 
                 except:
                     if Fast_enabled:
@@ -110,6 +127,7 @@ class Bully:
                         # other process has already started election
                         if (election_started):
                             print("election is in process...")
+                            serverstate.ISCOORDINATORALIVE = False
                         
                         # I am the first to detect the failure
                         elif self.coor_id != self.id:
@@ -120,12 +138,14 @@ class Bully:
                             election_started = True
                             print("Coordinator is dead, get ready for election \n")
                             #self.start_election()
+                            serverstate.ISCOORDINATORALIVE = False
                     
 
                     else:
                         if self.coor_id != self.id:
                             print("Coordinator is dead, get ready for election \n")
                             self.coor_id = -1
+                            serverstate.ISCOORDINATORALIVE = False
                         
     def start_election(self):
 
@@ -141,6 +161,7 @@ class Bully:
                 print(" iam the highest")
                 self.declare_am_coordinator()
                 coordinator_found = True
+                serverstate.ISCOORDINATORALIVE = True
 
             else: # goes if self.id < self.maxID
 
@@ -156,7 +177,7 @@ class Bully:
                         break
 
                 if (len(res_ids)> 0):
-                    print("inside loop saho")
+                    
                     # Send nomination
                     while len(res_ids) > 0:
 
@@ -201,6 +222,19 @@ class Bully:
                         self.socket.send_string(json.dumps(message))
                         self.declare_am_coordinator()
 
+                elif req['type'] == 'create_identity' and self.id == self.coor_id:
+                    print("Received create_identity task")
+                    if req["identity"] in serverstate.ALL_USERS :
+                        print("[Request] Create a new identity", req["identity"], " .Unsuccessful")
+                        message = { "type" : "create_identity_done" ,"approved": "False"}
+                        self.socket.send_string(json.dumps(message))
+                        
+                    else:
+                        message = { "type" : "create_identity_done" ,"approved": "True"}
+                        print("[Request] Create a new identity", req["identity"], " .successful")
+                        serverstate.ALL_USERS.append(req["identity"])
+                        self.socket.send_string(json.dumps(message))
+
     
         else:
 
@@ -212,6 +246,8 @@ class Bully:
     
     def declare_am_coordinator(self):
         print('I am the coordinator')
+        serverstate.AMICOORDINATOR = True
+        serverstate.ISCOORDINATORALIVE = True
         self.update_coor(self.address, self.heart_port, self.id)
         heart_beats_thread = threading.Thread(target=self.heart_beats, args=['coor'])
         heart_beats_thread.start()
@@ -229,7 +265,26 @@ class Bully:
                    result = self.start_election() 
                    if result:
                        coord_dead = False
+
+                # if not empty send message
+                if not(len(self.send_buffer) == 0 or self.coor_id == -1):
+                    message = self.send_buffer.pop(0)
+
+                    try:
+                        self.socket2.send_string(json.dumps(message))
+                        print("send string")
+                        #time.sleep(1)
+                        request = self.socket2.recv_string()
+                        self.receive_buffer.append(request)
+                        print("receive complete")
+                    except zmq.ZMQError as e:
+                        if e.errno == zmq.EAGAIN:
+                            self.send_buffer.append(message)
+                        else:
+                            print(e)
+
                 time.sleep(1)
+
         else:
             while True:
                 if self.coor_id == -1:
