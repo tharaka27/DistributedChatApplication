@@ -1,7 +1,9 @@
 #from testcases import test_threadpool, test_chatroominfo , test_configuration, test_localroominfo, test_remoteroominfo, test_fileReader
 from flask import Flask, jsonify, request
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
-from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
+#from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
+
+from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.fastbully import Bully
 import os
@@ -33,18 +35,22 @@ def Initialization():
 
         print("Setting ->" + i.getServerName() + i.getAddress() + ":" + str(i.getHeartPort()))
         if i.getServerName() == LOCAL_SERVER_NAME:
-            LOCAL_SERVER_CONFIGURATION = i
+            serverstate.LOCAL_SERVER_CONFIGURATION = i
+            #LOCAL_SERVER_CONFIGURATION = i
         else:
-            REMOTE_SERVER_CONFIGURATIONS.append(i)
+            serverstate.REMOTE_SERVER_CONFIGURATIONS.append(i)
+            #REMOTE_SERVER_CONFIGURATIONS.append(i)
 
 
     print("Initializing server with.....")   
     print("Local server configuration")
-    print( LOCAL_SERVER_CONFIGURATION )
+    print( serverstate.LOCAL_SERVER_CONFIGURATION )
     print("Remote server configurations")
-    print( REMOTE_SERVER_CONFIGURATIONS)
+    print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
 
-    bully  = Bully(LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS)
+    bully  = Bully()
+    print( "Bully instance" )
+    print(bully)
     bully.run()
 
 
