@@ -22,6 +22,19 @@ REMOTE_CHAT_ROOMS = []
 # list of users connected to this server
 LOCAL_USERS = []
 
+# set if this server is coordinator
+AMICOORDINATOR = False
+
+# set is coordinator is not alive
+ISCOORDINATORALIVE = False
+
+
+# set coordinator ip and port
+COORDINATOR = { "ip" : "", "port":"" }
+
+# List of all the users in the system
+ALL_USERS = []
+
 ONGOING_CONSENSUS = False
 
 COORDINATOR_CONFIGURATION = ServerConfiguration("DEFAULT", "localhost", "5000", "5000", "5000", 1)
