@@ -26,6 +26,7 @@ class Bully:
         self.coor_id = -1
         self.send_buffer = []
         self.receive_buffer = []
+        self.task_list = []
         self.msg_builder = MessageBuilder.getInstance()
         for p in self.processes:
             print(p)
@@ -85,14 +86,17 @@ class Bully:
 
         if proc == 'coor':
             while int(self.coor_id) == int(self.id):
+                task_instance = ""
+                if not(len(self.task_list)== 0):
+                    task_instance = self.task_list.pop(0)
                 message = {'type' : 'alive', 'address': self.address, \
-                    'port': self.heart_port, 'id': self.id }
+                    'port': self.heart_port, 'id': self.id, 'task' : task_instance }
                 self.heart_socket.send_string(json.dumps(message))
                 
                 serverstate.AMICOORDINATOR = True
                 serverstate.ISCOORDINATORALIVE = True
                 time.sleep(1)
-                
+
         else:
             while True:
                 try:
@@ -100,12 +104,16 @@ class Bully:
                     request = json.loads(coor_heart_beat)
 
                     
-                    if request['id'] > self.id:
+                    if request['type']== 'alive' and request['id'] > self.id:
                         print("[HEARTBEAT]  {}".format(coor_heart_beat))
                         self.update_coor(request['address'], request['port'], int(request['id']))
                         serverstate.ISCOORDINATORALIVE = True
                         serverstate.AMICOORDINATOR = False
-                
+                        
+                        # check whether their is a task
+                        if not(request['task'] == ''):
+                            print(request['task'])
+                    
                 except:
 
                     if self.coor_id != self.id:
@@ -133,7 +141,14 @@ class Bully:
                         self.socket.send_string(self.msg_builder.createNewIdentity(False))
                     else:
                         print("[Request] Create a new identity ", req["identity"], " successful")
+                        
+                        # add user to the all user catalogue
                         serverstate.ALL_USERS.append(req["identity"])
+
+                        # send message to all servers through pub-sub scheme
+                        self.task_list.append({"type" : "create_identity", "identity":req["identity"]})
+                        
+                        # send success message to the server
                         self.socket.send_string(self.msg_builder.createNewIdentity(True)) 
                 else:
                     self.socket.send_string(self.msg_builder.errorServer())
@@ -173,8 +188,8 @@ class Bully:
             if not(len(self.send_buffer) == 0 or self.coor_id == -1):
                 message = self.send_buffer.pop(0)
                 print("[INFO] Trying to send message", message)
-                self.connect_to_coordinator()
-                self.socket2.setsockopt(zmq.RCVTIMEO, 2000) #TIMEOUT
+                #self.connect_to_coordinator()
+                #self.socket2.setsockopt(zmq.RCVTIMEO, 2000) #TIMEOUT
                 try:
                     self.socket2.send_string(json.dumps(message), encoding='utf-8')
                     request = self.socket2.recv_string()
