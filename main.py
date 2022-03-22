@@ -49,9 +49,8 @@ def Initialization():
 
     bully  = Bully()
     bully.run()
-
-
-    msg = MessageBuilder()
+    
+    msg = MessageBuilder.getInstance()
 
 
 # driver function

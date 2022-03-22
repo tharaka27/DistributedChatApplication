@@ -6,6 +6,7 @@ import threading
 from models import serverstate
 import json
 import random
+from controllers.JSONMessageBuilder import MessageBuilder
 
 class Bully:
 
@@ -25,6 +26,7 @@ class Bully:
         self.coor_id = -1
         self.send_buffer = []
         self.receive_buffer = []
+        self.msg_builder = MessageBuilder.getInstance()
         for p in self.processes:
             print(p)
             if self.max_id < p.getId():
@@ -90,6 +92,7 @@ class Bully:
                 serverstate.AMICOORDINATOR = True
                 serverstate.ISCOORDINATORALIVE = True
                 time.sleep(1)
+                
         else:
             while True:
                 try:
@@ -127,16 +130,13 @@ class Bully:
                     print("[INFO] Received create_identity task")
                     if req["identity"] in serverstate.ALL_USERS :
                         print("[Request] Create a new identity ", req["identity"], " unsuccessful")
-                        message = { "type" : "create_identity_done" ,"approved": "False"}
-                        self.socket.send_string(json.dumps(message))
+                        self.socket.send_string(self.msg_builder.createNewIdentity(False))
                     else:
-                        message = { "type" : "create_identity_done" ,"approved": "True"}
                         print("[Request] Create a new identity ", req["identity"], " successful")
                         serverstate.ALL_USERS.append(req["identity"])
-                        self.socket.send_string(json.dumps(message)) 
+                        self.socket.send_string(self.msg_builder.createNewIdentity(True)) 
                 else:
-                    message = { "type" : "error message" }
-                    self.socket.send_string(json.dumps(message))
+                    self.socket.send_string(self.msg_builder.errorServer())
 
             except json.decoder.JSONDecodeError as e:
                 print("[Warning] Trying to decode election message")

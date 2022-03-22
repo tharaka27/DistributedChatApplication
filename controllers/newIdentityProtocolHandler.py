@@ -2,7 +2,7 @@ from models import serverstate
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
 from flask import jsonify
-from algorithms.fastbully import Bully 
+from algorithms.bully import Bully 
 import json
 import time
 
