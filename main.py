@@ -1,11 +1,10 @@
 #from testcases import test_threadpool, test_chatroominfo , test_configuration, test_localroominfo, test_remoteroominfo, test_fileReader
 from flask import Flask, jsonify, request
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
-#from models.serverstate import LOCAL_SERVER_CONFIGURATION, REMOTE_SERVER_CONFIGURATIONS
-
 from models import serverstate
 from utilities.fileReader import FileReader
-from algorithms.fastbully import Bully
+from algorithms.bully import Bully
+from controllers.JSONMessageBuilder import MessageBuilder 
 import os
 app = Flask(__name__)
 
@@ -42,16 +41,16 @@ def Initialization():
             #REMOTE_SERVER_CONFIGURATIONS.append(i)
 
 
-    print("Initializing server with.....")   
-    print("Local server configuration")
+    print("[INFO] Initializing server with.....")   
+    print("[INFO] Local server configuration")
     print( serverstate.LOCAL_SERVER_CONFIGURATION )
-    print("Remote server configurations")
+    print("[INFO] Remote server configurations")
     print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
 
     bully  = Bully()
-    print( "Bully instance" )
-    print(bully)
     bully.run()
+    
+    msg = MessageBuilder.getInstance()
 
 
 # driver function

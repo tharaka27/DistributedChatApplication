@@ -34,3 +34,13 @@ COORDINATOR = { "ip" : "", "port":"" }
 
 # List of all the users in the system
 ALL_USERS = []
+
+ONGOING_CONSENSUS = False
+
+COORDINATOR_CONFIGURATION = ServerConfiguration("DEFAULT", "localhost", "5000", "5000", "5000", 1)
+
+# dict of (token.CONSENSUS, Integer)
+VOTE_SET = dict()
+
+# list of suspect servers
+SUSPECT_SERVERS = dict()  # dict of (serverId, token.Gossip)
