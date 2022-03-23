@@ -83,6 +83,8 @@ def connection_handler(connection,add):
             elif operation == 'createroom':
                 print("[INFO] Create Room Request Received")
 
+                old_room = chatroomid
+
                 success, chatroomid, response = createRoomProtocolHandler(identity,req).handle()
                 print("Hello world")
                 print(response)
@@ -95,8 +97,7 @@ def connection_handler(connection,add):
                     response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
                     response2 = json.dumps(response2)+ "\n"
 
-                    broadcast_pool[chatroomid].append(response2)
-                    chatroomid = newroomid
+                    broadcast_pool[old_room].append(response2)
                     broadcast_pool[chatroomid] = []
 
                     connection.send(response2.encode("utf-8"))
