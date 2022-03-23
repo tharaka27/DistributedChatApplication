@@ -60,7 +60,7 @@ def connection_handler(connection,add):
             elif operation == 'createroom':
                 print("[INFO] Create Room Request Received")
 
-                chatroomid, response = createRoomProtocolHandler(identity,req).handle()
+                success, chatroomid, response = createRoomProtocolHandler(identity,req).handle()
                 print("Hello world")
                 print(response)
 
@@ -68,10 +68,14 @@ def connection_handler(connection,add):
                 print(response)
                 connection.send(response.encode('utf-8'))
 
-                response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
-                response2 = json.dumps(response2)+ "\n"
+                if success:
+                    response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
+                    response2 = json.dumps(response2)+ "\n"
 
-                connection.send(response2.encode("utf-8"))
+                    connection.send(response2.encode("utf-8"))
+                else:
+                    # if unsuccessful set the chatroomid back to mainhall
+                    chatroomid = mainHallName
             
             elif operation == "who":
                 print("[INFO] WHO Request Received")
