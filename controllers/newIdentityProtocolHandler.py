@@ -19,6 +19,12 @@ class newIdentityProtocolHandler:
         if not(serverstate.ISCOORDINATORALIVE):
             return False, self._message_builder.coordinatorNotAlive(self._protocol)
 
+        # imposing strict rules for the name
+        name = str(self._name)
+        
+        if len(self._name) < 3 or len(self._name) > 16 or name[0].isdigit():
+            return False,self._name, self._message_builder.newIdentity("False")
+
         # check whether I am coordinator
         if serverstate.AMICOORDINATOR:
             # the user exists
