@@ -70,10 +70,11 @@ def Main():
 
 if __name__ == "__main__":
 
-    LOCAL_SERVER_NAME = os.environ.get('s')
+    LOCAL_SERVER_NAME = input("serverid :")
+    FILE_PATH = input("servers_conf :")
     
     f = FileReader()
-    config_objects = f.populate("configuration.txt")
+    config_objects = f.populate(FILE_PATH)
     for i in config_objects:
 
         print("Setting ->" + i.getServerName() + i.getAddress() + ":" + str(i.getHeartPort()))
