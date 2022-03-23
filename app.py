@@ -172,6 +172,11 @@ def connection_handler(connection,add):
                     chatroomid = mainHallName
                     connection.send(response.encode('utf-8'))
 
+            elif operation == "deleteroom":
+                
+                print("[INFO] Delete Room Request Received")
+
+
 
         except socket.timeout:
 

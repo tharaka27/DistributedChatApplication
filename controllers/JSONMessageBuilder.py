@@ -97,4 +97,10 @@ class MessageBuilder:
         message["serverid"] = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
         return json.dumps(message)
 
+    def deleteRoom(self,roomid,status):
+        message = {}    
+        message["type"] = "deleteroom"
+        message["roomid"] = roomid
+        message["approved"] = status
+        return json.dumps(message)
     

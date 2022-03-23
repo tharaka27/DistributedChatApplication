@@ -17,7 +17,7 @@ class moveJoinProtocolHandler:
         
     def handle(self):
 
-        print("[INFO] Handling new identity request started.")
+        print("[INFO] Handling movejoin request started.")
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
             return self._message_builder.coordinatorNotAlive(self._protocol)
