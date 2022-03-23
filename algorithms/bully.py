@@ -42,12 +42,11 @@ class Bully:
 
     def connect_to_higher_ids(self):
         for p in self.processes:
-            # changed to connect all
-            if p.getId() > int(self.id):
+            if int(p.getId()) > int(self.id):
                 self.socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
         # so that last process does not block on send...
         #self.socket2.connect('tcp://{}:{}'.format(p['ip'], 55555))
-    
+
     def connect_all(self):
         for p in self.processes:
             if p.getId() != self.id:
@@ -67,6 +66,8 @@ class Bully:
         self.socket.bind('tcp://{}:{}'.format(self.address, self.port))
         self.socket2 = self.context.socket(zmq.REQ)
         self.socket2.setsockopt(zmq.RCVTIMEO, TIMEOUT) #TIMEOUT
+        self.socket_coor = self.context.socket(zmq.REQ)
+        self.socket_coor.setsockopt(zmq.RCVTIMEO, TIMEOUT)
         self.connect_to_higher_ids()
         self.heart_context = zmq.Context()
         self.heart_socket = self.heart_context.socket(zmq.PUB)
@@ -103,7 +104,6 @@ class Bully:
                     coor_heart_beat = self.heart_socket2.recv_string()
                     request = json.loads(coor_heart_beat)
 
-                    
                     if request['type']== 'alive' and request['id'] > self.id:
                         print("[HEARTBEAT]  {}".format(coor_heart_beat))
                         self.update_coor(request['address'], request['port'], int(request['id']))
@@ -112,8 +112,12 @@ class Bully:
                         
                         # check whether their is a task
                         if not(request['task'] == ''):
-                            print(request['task'])
-                    
+                            # handle create_identity task
+                            if request['task']['type'] == 'create_identity':
+                                if not(request['task']["identity"] in serverstate.ALL_USERS) :
+                                    serverstate.ALL_USERS.append(request['task']["identity"])
+                                    print("[INFO] Added new user {} to the ALL_USERS ".format(\
+                                        request['task']["identity"]))
                 except:
 
                     if self.coor_id != self.id:
@@ -171,39 +175,56 @@ class Bully:
         heart_beats_thread = threading.Thread(target=self.heart_beats, args=['coor'])
         heart_beats_thread.start()
 
+    def run_msg_sender(self):
+        while True:
+            if self.coor_id == -1 or (self.id == self.coor_id):
+                continue
+            else:
+                if not(len(self.send_buffer) == 0):
+                    message = self.send_buffer.pop(0)
+                
+                    # get coordinator address and port
+                    address, port = "", ""
+                    for p in self.processes:
+                        if int(p.getId()) == self.coor_id:
+                            address = p.getAddress()
+                            port = p.getCoordinationPort()
+                            break
+                    try:
+                        print("[INFO] Trying to send message to the coordinator ({},{})".format(\
+                            address,port), message)
+                        self.socket_coor.connect('tcp://{}:{}'.format(address, port))
+                        self.socket_coor.send_string(json.dumps(message))
+                        req = self.socket_coor.recv_string()
+                        self.receive_buffer.append(req)
+                        print("[INFO] Receive complete")
+                        
+                    except zmq.ZMQError as e:
+                        # try restarting the socket connection
+                        self.socket_coor.close(0)
+                        self.socket_coor = self.context.socket(zmq.REQ)
+                        self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
+                        print("[Error] {}".format(e))
+                        self.send_buffer.append(message)
+                
+            time.sleep(1)
+
 
     def run_client(self):
         while True:
             if self.coor_id == -1:
+                print("[INFO] Starting election procedure")
+                
                 try:
                     if self.id == self.max_id:
                         self.declare_am_coordinator()
                     else: # goes if self.id < self.maxID
                         self.socket2.send_string('election')
                         req = self.socket2.recv_string()
-                except:
+                        
+                except :
+                    print("[Error] Error occured while trying to start election")
                     self.declare_am_coordinator()
-
-                # if not empty send message
-            if not(len(self.send_buffer) == 0 or self.coor_id == -1):
-                message = self.send_buffer.pop(0)
-                print("[INFO] Trying to send message", message)
-                #self.connect_to_coordinator()
-                #self.socket2.setsockopt(zmq.RCVTIMEO, 2000) #TIMEOUT
-                try:
-                    self.socket2.send_string(json.dumps(message), encoding='utf-8')
-                    request = self.socket2.recv_string()
-                    self.receive_buffer.append(request)
-                    print("receive complete")
-                except zmq.ZMQError as e:
-                    self.socket2.close()
-                    self.socket2 = self.context.socket(zmq.REQ)
-                    if e.errno == zmq.EAGAIN:
-                        self.send_buffer.append(message)
-                    else:
-                        print(e)
-                        time.sleep(1)
-                        self.send_buffer.append(message)
 
             time.sleep(1)
 
@@ -218,3 +239,6 @@ class Bully:
 
         client_thread = threading.Thread(target=self.run_client, args=[])
         client_thread.start()
+
+        msg_sender_thread = threading.Thread(target=self.run_msg_sender, args=[])
+        msg_sender_thread.start()
