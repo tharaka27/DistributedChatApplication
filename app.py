@@ -5,16 +5,19 @@ import signal
 import sys
 import time
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
+from controllers.createRoomProtocolHandler import createRoomProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
 from controllers.JSONMessageBuilder import MessageBuilder 
+from models.localroominfo import LocalRoomInfo
 import os
 
 def connection_handler(connection,add):
 
 
     identity = "" # keeps identity of the connected client
+    chatroomid = ""
 
     while True:
 
@@ -27,9 +30,8 @@ def connection_handler(connection,add):
             if operation == 'newidentity':
 
                 print("[INFO] New Identity Request Received")
+                identity, response = newIdentityProtocolHandler(req).handle()
 
-                # ----------------- dummy testing -----------------
-                response = newIdentityProtocolHandler(req).handle()
                 response = response + "\n"
                 print(response)
                 connection.send(response.encode('utf-8'))
@@ -38,24 +40,29 @@ def connection_handler(connection,add):
                 response2 = json.dumps(response2)+ "\n"
 
                 connection.send(response2.encode("utf-8"))
-                '''
-                response = {"type":"newidentity","approved":"true"}
-                response = json.dumps(response) + "\n"
-        
-                connection.send(response.encode("utf-8"))
+            
+            
+            elif operation == 'createroom':
+                print("[INFO] Create Room Request Received")
 
-                response2 = {"type" : "roomchange", "identity" : "vihan", "former" : "", "roomid" : "MainHall-s1"}
+                chatroomid, response = createRoomProtocolHandler(identity,req).handle()
+                print("Hello world")
+                print(response)
+
+                response = response + "\n"
+                print(response)
+                connection.send(response.encode('utf-8'))
+
+                response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
                 response2 = json.dumps(response2)+ "\n"
 
                 connection.send(response2.encode("utf-8"))
-                '''
-
+            
                 
         except:
             print("Error occured in client ",identity,"!")
             connection.close()
             quit()
-            continue
 
 def Main():
     # Server intialization
@@ -67,7 +74,7 @@ def Main():
     
     except:
         print("[INFO] Port is already Occupied\nShutting down the server")
-        sys.exit(0)
+        quit()
     s.listen(20)                 # Now wait for client connection.
 
     print ('Server started!')
@@ -83,10 +90,11 @@ def Main():
 if __name__ == "__main__":
 
     LOCAL_SERVER_NAME = input("serverid :")
-    FILE_PATH = input("servers_conf :")
+    #FILE_PATH = input("servers_conf :")
     
     f = FileReader()
-    config_objects = f.populate(FILE_PATH)
+    #config_objects = f.populate(FILE_PATH)
+    config_objects = f.populate('configuration.txt')
     for i in config_objects:
 
         print("Setting ->" + i.getServerName() + i.getAddress() + ":" + str(i.getHeartPort()))
@@ -102,9 +110,15 @@ if __name__ == "__main__":
     print("[INFO] Local server configuration")
     print( serverstate.LOCAL_SERVER_CONFIGURATION )
 
+    # add main hall to the local chat room set
     print("[INFO] Creating the mainhall in the server")
     mainHallName =  "MainHall-" + serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
-    serverstate.LOCAL_CHAT_ROOMS[mainHallName] = []
+    chat_room_instance = LocalRoomInfo()
+    chat_room_instance.setChatRoomID(mainHallName)
+    chat_room_instance.setOwner("")
+    chat_room_instance.setCoordinator(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName())
+    
+    serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)
     print(serverstate.LOCAL_CHAT_ROOMS)
 
     print("[INFO] Remote server configurations")

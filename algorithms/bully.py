@@ -7,6 +7,7 @@ from models import serverstate
 import json
 import random
 from controllers.JSONMessageBuilder import MessageBuilder
+from models.localroominfo import LocalRoomInfo
 
 class Bully:
 
@@ -118,6 +119,21 @@ class Bully:
                                     serverstate.ALL_USERS.append(request['task']["identity"])
                                     print("[INFO] Added new user {} to the ALL_USERS ".format(\
                                         request['task']["identity"]))
+                            elif request['task']['type'] == 'create_chat_room':
+                                isRoomExist = False
+                                for room in serverstate.ALL_CHAT_ROOMS:
+                                    if room.getId == self._roomid:
+                                        isRoomExist = True
+                                
+                                if not(isRoomExist):
+                                    chat_room_instance = LocalRoomInfo()
+                                    chat_room_instance.setChatRoomID(request['task']['roomid'])
+                                    chat_room_instance.setOwner(request['task']['identity'])
+                                    chat_room_instance.setCoordinator(request['task']['server'])
+                                    serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
+                                    print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
+                                        request['task']["roomid"]))
+
                 except:
 
                     if self.coor_id != self.id:
@@ -154,6 +170,27 @@ class Bully:
                         
                         # send success message to the server
                         self.socket.send_string(self.msg_builder.createNewIdentity(True)) 
+
+                elif req['type'] == 'create_chat_room' and self.id == self.coor_id:
+                    isRoomExist = False
+                    for room in serverstate.ALL_CHAT_ROOMS:
+                        if room.getId == req['roomid']:
+                            isRoomExist = True
+                                
+                    if not(isRoomExist):
+                        # success
+                        chat_room_instance = LocalRoomInfo()
+                        chat_room_instance.setChatRoomID(req['roomid'])
+                        chat_room_instance.setOwner(req['identity'])
+                        chat_room_instance.setCoordinator(req['server'])
+                        serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
+                        print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
+                                    req["roomid"]))
+                        self.socket.send_string(self.msg_builder.createNewChatRoom(True)) 
+                    else:
+                        self.socket.send_string(self.msg_builder.createNewChatRoom(False)) 
+
+
                 else:
                     self.socket.send_string(self.msg_builder.errorServer())
 

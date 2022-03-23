@@ -1,7 +1,6 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from flask import jsonify
 from algorithms.bully import Bully 
 import json
 import time
@@ -22,15 +21,27 @@ class newIdentityProtocolHandler:
 
         # check whether I am coordinator
         if serverstate.AMICOORDINATOR:
-            print("[INFO] Handling new identity inside AMICOORDINATOR.")
             # the user exists
             if self._name in serverstate.ALL_USERS :
-                return self._message_builder.newIdentity("False")
+                print("[INFO] Handling new identity inside AMICOORDINATOR. User exists")
+                return self._name, self._message_builder.newIdentity("False")
 
             else:
-                serverstate.ALL_USERS.append(self._name)
-                serverstate.LOCAL_USERS.append(self._name)
-                return self._message_builder.newIdentity("True") 
+                print("[INFO] Handling new identity inside AMICOORDINATOR. User does not exist")
+
+                try:
+                    serverstate.ALL_USERS.append(self._name)
+                    serverstate.LOCAL_USERS.append(self._name)
+                except:
+                    print("[Error] Unexpected error")
+                # distribute it to the others
+                try:
+                    self._bully_instance.task_list.append({"type" : "create_identity", "identity":self._name})
+                except :
+                    print("[Error] Error occured while distributing the new identity")
+
+                print("[INFO] FINISHED")
+                return self._name,self._message_builder.newIdentity("True") 
 
         else:
             # forward the message to the coordinator
@@ -48,6 +59,6 @@ class newIdentityProtocolHandler:
             if message["approved"] == "True" :
                 serverstate.ALL_USERS.append(self._name)
                 serverstate.LOCAL_USERS.append(self._name)
-                return self._message_builder.newIdentity("True") 
+                return self._name,self._message_builder.newIdentity("True") 
             else:
-                return self._message_builder.newIdentity("False") 
+                return self._name,self._message_builder.newIdentity("False") 
