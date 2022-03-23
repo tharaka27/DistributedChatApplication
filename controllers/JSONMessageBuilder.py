@@ -1,5 +1,7 @@
 import json
 
+from models import serverstate
+
 # IMPORTANT !!!
 #
 # For server to server communication use -> json.dumps
@@ -86,6 +88,13 @@ class MessageBuilder:
         message["roomid"] = id
         message["host"] = host
         message["port"] = port
+        return json.dumps(message)
+    
+    def serverChange(self,status):
+        message = {}    
+        message["type"] = "serverchange"
+        message["approved"] = status
+        message["serverid"] = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
         return json.dumps(message)
 
     

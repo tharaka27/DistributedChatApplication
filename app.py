@@ -8,6 +8,7 @@ from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from controllers.createRoomProtocolHandler import createRoomProtocolHandler
 from controllers.whoProtocolHandler import whoProtocolHandler
 from controllers.joinRoomProtocolHandler import joinRoomProtocolHandler
+from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
@@ -149,7 +150,29 @@ def connection_handler(connection,add):
                 print(Messages[chatroomid])
                 #connection.send(response.encode('utf-8'))
 
-            
+            elif operation == "movejoin":
+
+                print("[INFO] Move join Request Received")
+
+                identity = req['identity'] 
+                broadcast,response = moveJoinProtocolHandler(identity,req['former'],req).handle()
+
+                response = response + "\n"
+
+                if (broadcast):
+                    response2 = {"type" : "roomchange", "identity" : identity, "former" : req['former'], "roomid" : req['roomid']}
+                    response2 = json.dumps(response2)+ "\n"
+                    broadcast_pool[req['roomid']].append(response)
+                    bd_index = len(broadcast_pool[req['roomid']])
+                    chatroomid = req['roomid']
+                    connection.send(response.encode('utf-8'))
+                else:
+                    broadcast_pool[mainHallName].append(response)
+                    bd_index = len(broadcast_pool[req['roomid']])
+                    chatroomid = mainHallName
+                    connection.send(response.encode('utf-8'))
+
+
         except socket.timeout:
 
             if bd_index < (len(broadcast_pool[chatroomid])):
