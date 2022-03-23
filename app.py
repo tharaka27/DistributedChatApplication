@@ -7,6 +7,7 @@ import time
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from controllers.createRoomProtocolHandler import createRoomProtocolHandler
 from controllers.whoProtocolHandler import whoProtocolHandler
+from controllers.joinRoomProtocolHandler import joinRoomProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -15,6 +16,8 @@ from models.localroominfo import LocalRoomInfo
 import os
 
 global mainHallName
+global broadcast_pool
+broadcast_pool = {}
 
 def connection_handler(connection,add):
 
@@ -22,10 +25,12 @@ def connection_handler(connection,add):
     identity = "" # keeps identity of the connected client
     global mainHallName
     chatroomid = mainHallName
-    
+    bd_index = 0
+
+    connection.settimeout(3)
 
     while True:
-
+        
         try:
             req = connection.recv(1024)
             req = json.loads(req)
@@ -46,6 +51,8 @@ def connection_handler(connection,add):
                         "former" : "", "roomid" : mainHallName}
                     response2 = json.dumps(response2)+ "\n"
 
+                    bd_index = len(broadcast_pool[chatroomid])
+
                     connection.send(response2.encode("utf-8"))
                 
                 for room in serverstate.ALL_CHAT_ROOMS:
@@ -60,7 +67,7 @@ def connection_handler(connection,add):
             elif operation == 'createroom':
                 print("[INFO] Create Room Request Received")
 
-                chatroomid, response = createRoomProtocolHandler(identity,req).handle()
+                newroomid, response = createRoomProtocolHandler(identity,req).handle()
                 print("Hello world")
                 print(response)
 
@@ -68,10 +75,34 @@ def connection_handler(connection,add):
                 print(response)
                 connection.send(response.encode('utf-8'))
 
+                broadcast_pool[chatroomid].append(response)
+                chatroomid = newroomid
+                broadcast_pool[chatroomid] = []
+
+
                 response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
                 response2 = json.dumps(response2)+ "\n"
 
                 connection.send(response2.encode("utf-8"))
+
+            elif operation == 'joinroom':
+
+                print("[INFO] Join Room Request Received")
+
+                broadcast,response = joinRoomProtocolHandler(identity,chatroomid,req).handle()
+
+                response = response + "\n"
+
+                if broadcast == "b":
+                    broadcast_pool[chatroomid].append(response)
+                    broadcast_pool[req['roomid']].append(response)
+                    chatroomid = req['roomid']
+
+                elif broadcast == "o":
+                    broadcast_pool[chatroomid].append(response)
+                    chatroomid = req['roomid']
+                    
+                connection.send(response.encode("utf-8"))
             
             elif operation == "who":
                 print("[INFO] WHO Request Received")
@@ -85,7 +116,19 @@ def connection_handler(connection,add):
                 connection.send(response.encode('utf-8'))
 
             
+        except socket.timeout:
+
+            if bd_index < (len(broadcast_pool[chatroomid])):
                 
+                print(bd_index,len(broadcast_pool[chatroomid]))
+                while(bd_index < len(broadcast_pool[chatroomid])):
+                    msg = broadcast_pool[chatroomid][bd_index]
+                    connection.send(msg.encode('utf-8'))
+                    bd_index = bd_index +1
+            
+            continue
+
+
         except:
             print("Error occured in client ",identity,"!")
             connection.close()
@@ -115,7 +158,7 @@ def Main():
 
 
 if __name__ == "__main__":
-
+    
     LOCAL_SERVER_NAME = input("serverid :")
     #FILE_PATH = input("servers_conf :")
     
@@ -139,14 +182,16 @@ if __name__ == "__main__":
 
     # add main hall to the local chat room set
     print("[INFO] Creating the mainhall in the server")
-    global mainHallName
+    #global mainHallName
     mainHallName =  "MainHall-" + serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
     chat_room_instance = LocalRoomInfo()
     chat_room_instance.setChatRoomID(mainHallName)
     chat_room_instance.setOwner("")
     chat_room_instance.setCoordinator(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName())
-    
+
     serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)
+    broadcast_pool[mainHallName] = []
+
     print(serverstate.LOCAL_CHAT_ROOMS)
 
     print("[INFO] Remote server configurations")

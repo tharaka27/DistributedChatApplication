@@ -72,5 +72,20 @@ class MessageBuilder:
         message["owner"] = owner
         return json.dumps(message)
 
+    def roomChange(self,id,current,next):
+        message = {}    
+        message["type"] = "roomchange"
+        message["identity"] = id
+        message["former"] = current
+        message["roomid"] = next
+        return json.dumps(message)
+    
+    def route(self,id,host,port):
+        message = {}    
+        message["type"] = "route"
+        message["roomid"] = id
+        message["host"] = host
+        message["port"] = port
+        return json.dumps(message)
 
     
