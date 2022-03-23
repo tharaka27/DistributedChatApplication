@@ -64,5 +64,13 @@ class MessageBuilder:
         message = { "type" : "error message" }
         return json.dumps(message)
 
+    def whoProtocol(self, roomid, identities, owner):
+        message = {}
+        message["type"] = "roomcontents"
+        message["roomid"] = roomid
+        message["identities"] = identities
+        message["owner"] = owner
+        return json.dumps(message)
+
 
     

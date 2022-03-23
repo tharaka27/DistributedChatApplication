@@ -41,6 +41,7 @@ class createRoomProtocolHandler:
                 chat_room_instance.setChatRoomID(self._roomid)
                 chat_room_instance.setOwner(self._identity)
                 chat_room_instance.setCoordinator(self._local_server_name)
+                chat_room_instance.addMember(self._identity)
 
                 # add to the local chat rooms list
                 serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)
@@ -73,6 +74,7 @@ class createRoomProtocolHandler:
                     chat_room_instance.setChatRoomID(self._roomid)
                     chat_room_instance.setOwner(self._identity)
                     chat_room_instance.setCoordinator(self._local_server_name)
+                    chat_room_instance.addMember(self._identity)
 
                     # add to the local chat rooms list
                     serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)

@@ -6,6 +6,7 @@ import sys
 import time
 from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from controllers.createRoomProtocolHandler import createRoomProtocolHandler
+from controllers.whoProtocolHandler import whoProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -19,7 +20,9 @@ def connection_handler(connection,add):
 
 
     identity = "" # keeps identity of the connected client
-    chatroomid = ""
+    global mainHallName
+    chatroomid = mainHallName
+    
 
     while True:
 
@@ -38,13 +41,20 @@ def connection_handler(connection,add):
                 print(response)
                 connection.send(response.encode('utf-8'))
                 
-                global mainHallName
                 if success:
                     response2 = {"type" : "roomchange", "identity" : identity, \
                         "former" : "", "roomid" : mainHallName}
                     response2 = json.dumps(response2)+ "\n"
 
                     connection.send(response2.encode("utf-8"))
+                
+                for room in serverstate.ALL_CHAT_ROOMS:
+                    if room.getChatRoomId() == chatroomid:
+                        room.addMember(identity)
+                
+                for room in serverstate.LOCAL_CHAT_ROOMS:
+                    if room.getChatRoomId() == chatroomid:
+                        room.addMember(identity)
             
             
             elif operation == 'createroom':
@@ -62,6 +72,18 @@ def connection_handler(connection,add):
                 response2 = json.dumps(response2)+ "\n"
 
                 connection.send(response2.encode("utf-8"))
+            
+            elif operation == "who":
+                print("[INFO] WHO Request Received")
+                
+                response = whoProtocolHandler(chatroomid).handle()
+                
+                print(response)
+
+                response = response + "\n"
+                print(response)
+                connection.send(response.encode('utf-8'))
+
             
                 
         except:

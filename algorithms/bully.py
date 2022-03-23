@@ -130,6 +130,7 @@ class Bully:
                                     chat_room_instance.setChatRoomID(request['task']['roomid'])
                                     chat_room_instance.setOwner(request['task']['identity'])
                                     chat_room_instance.setCoordinator(request['task']['server'])
+                                    chat_room_instance.addMember(request['task']['identity'])
                                     serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                                     print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
                                         request['task']["roomid"]))
@@ -183,6 +184,7 @@ class Bully:
                         chat_room_instance.setChatRoomID(req['roomid'])
                         chat_room_instance.setOwner(req['identity'])
                         chat_room_instance.setCoordinator(req['server'])
+                        chat_room_instance.addMember(req['identity'])
                         serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                         print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
                                     req["roomid"]))
