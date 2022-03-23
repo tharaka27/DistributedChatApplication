@@ -8,6 +8,7 @@ from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from controllers.createRoomProtocolHandler import createRoomProtocolHandler
 from controllers.whoProtocolHandler import whoProtocolHandler
 from controllers.joinRoomProtocolHandler import joinRoomProtocolHandler
+from controllers.messageProtocolHandler import messageProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -19,17 +20,30 @@ global mainHallName
 global broadcast_pool
 broadcast_pool = {}
 
+Messages = {}
+
 def connection_handler(connection,add):
 
+    connection.settimeout(3)
 
     identity = "" # keeps identity of the connected client
     global mainHallName
     chatroomid = mainHallName
     bd_index = 0
+    local_chat_pointer = 0
+    ifFirstTime = True
 
     connection.settimeout(3)
 
     while True:
+
+        if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
+            buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
+                "content" : Messages[chatroomid][local_chat_pointer][1]}
+            local_chat_pointer = local_chat_pointer + 1
+            buffer_json = json.dumps(buffer) + "\n"
+            connection.send(buffer_json.encode('utf-8'))
+        
         
         try:
             req = connection.recv(1024)
@@ -38,6 +52,8 @@ def connection_handler(connection,add):
             operation = req['type']
 
             if operation == 'newidentity':
+
+                ifFirstTime = False
 
                 print("[INFO] New Identity Request Received")
                 success,identity, response = newIdentityProtocolHandler(req).handle()
@@ -67,7 +83,7 @@ def connection_handler(connection,add):
             elif operation == 'createroom':
                 print("[INFO] Create Room Request Received")
 
-                newroomid, response = createRoomProtocolHandler(identity,req).handle()
+                success, chatroomid, response = createRoomProtocolHandler(identity,req).handle()
                 print("Hello world")
                 print(response)
 
@@ -75,15 +91,19 @@ def connection_handler(connection,add):
                 print(response)
                 connection.send(response.encode('utf-8'))
 
-                broadcast_pool[chatroomid].append(response)
-                chatroomid = newroomid
-                broadcast_pool[chatroomid] = []
+                if success:
+                    response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
+                    response2 = json.dumps(response2)+ "\n"
 
+                    broadcast_pool[chatroomid].append(response2)
+                    chatroomid = newroomid
+                    broadcast_pool[chatroomid] = []
 
-                response2 = {"type" : "roomchange", "identity" : identity, "former" : "", "roomid" : chatroomid}
-                response2 = json.dumps(response2)+ "\n"
+                    connection.send(response2.encode("utf-8"))
+                else:
+                    # if unsuccessful set the chatroomid back to mainhall
+                    chatroomid = mainHallName
 
-                connection.send(response2.encode("utf-8"))
 
             elif operation == 'joinroom':
 
@@ -107,13 +127,26 @@ def connection_handler(connection,add):
             elif operation == "who":
                 print("[INFO] WHO Request Received")
                 
-                response = whoProtocolHandler(chatroomid).handle()
+                response = messageProtocolHandler(chatroomid, )
                 
                 print(response)
 
                 response = response + "\n"
                 print(response)
                 connection.send(response.encode('utf-8'))
+            
+            elif operation == "message":
+                print("[INFO] Message Request Received")
+                
+                #response = whoProtocolHandler(chatroomid, req).handle()
+                try:
+                    Messages[chatroomid].append((identity,req['content']))
+                except Exception as e:
+                    print("[Error] {}".format(e))
+                    Messages[chatroomid] = []
+                
+                print(Messages[chatroomid])
+                #connection.send(response.encode('utf-8'))
 
             
         except socket.timeout:
@@ -130,9 +163,9 @@ def connection_handler(connection,add):
 
 
         except:
-            print("Error occured in client ",identity,"!")
-            connection.close()
-            quit()
+            print("Timeout occured in client ",identity,"!")
+            #connection.close()
+            #quit()
 
 def Main():
     # Server intialization
@@ -193,6 +226,9 @@ if __name__ == "__main__":
     broadcast_pool[mainHallName] = []
 
     print(serverstate.LOCAL_CHAT_ROOMS)
+
+    # setup message dictionary
+    Messages[mainHallName] = []
 
     print("[INFO] Remote server configurations")
     print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
