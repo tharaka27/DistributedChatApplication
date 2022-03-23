@@ -63,6 +63,21 @@ class MessageBuilder:
     def errorServer(self):
         message = { "type" : "error message" }
         return json.dumps(message)
-
+    
+    def roomChange(self,identity,former,new):
+        message = {}
+        message["type"] = "roomchange"
+        message["identity"] = identity
+        message["former"] = former
+        message["roomid"] = new
+        return json.dumps(message)
+    
+    def route(self,room,host,port):
+        message = {}
+        message["type"] = "route"
+        message["roomid"] = room
+        message["host"] = str(host)
+        message["port"] = str(port)
+        return json.dumps(message)  
 
     

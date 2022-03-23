@@ -19,6 +19,7 @@ def connection_handler(connection,add):
     identity = "" # keeps identity of the connected client
     chatroomid = ""
 
+
     while True:
 
         try:
