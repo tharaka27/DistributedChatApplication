@@ -28,10 +28,17 @@ class MessageBuilder:
         message["type"] = "newidentity"
         message["approved"] = str(approve)
         return json.dumps(message)
+    
+    def newChatRoom(self, roomId, approve):
+        message = {}
+        message["type"] = "createroom"
+        message["roomid"] = roomId
+        message["approved"] = str(approve)
+        return json.dumps(message)
 
     def coordinatorNotAlive(self, protocol):
         print("[Error] Coordinator not alive" + protocol + " cannot execute")
-        return json.dumps({"error" : "Coordinator not alive"})
+        return json.dumps({"error" : "Coordinator not alive"}) + "\n"
 
     def createNewIdentity(self, approve):
         message = {}
@@ -40,6 +47,14 @@ class MessageBuilder:
         else:
             message = { "type" : "create_identity_done" ,"approved": "False"}
         return json.dumps(message)
+    
+    def createNewChatRoom(self, approve):
+        message = {}
+        if approve:
+            message = { "type" : "create_chatroom_done" ,"approved": "True"}
+        else:
+            message = { "type" : "create_chatroom_done" ,"approved": "False"}
+        return json.dumps(message)
 
     def distributeNewIdentity(self, name):
         message = { "type" : "create_identity" ,"identity": name }
@@ -47,7 +62,7 @@ class MessageBuilder:
 
     def errorServer(self):
         message = { "type" : "error message" }
-        return json.dumps(message) 
+        return json.dumps(message)
 
 
     

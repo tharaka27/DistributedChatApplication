@@ -3,10 +3,12 @@ import threading
 
 class LocalRoomInfo (ChatRoomInfo):
 
-    def __init__(self, owner=""):
+    def __init__(self, ChatRoomId="" ,owner="",  coordinator=""):
         self.lock = threading.Lock()
+        self.setChatRoomID(ChatRoomId)
         self.owner = owner
         self.members = []
+        self.coordinator = coordinator
 
     def getOwner(self):
         return self.owner
@@ -35,6 +37,11 @@ class LocalRoomInfo (ChatRoomInfo):
         finally:
             self.lock.release()
 
+    def setCoordinator(self, coordinator):
+        self.coordinator = coordinator
+
+    def getCoordinator(self):
+        return self.coordinator
 
 
     

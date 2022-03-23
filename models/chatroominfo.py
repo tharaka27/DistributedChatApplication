@@ -1,5 +1,5 @@
 class ChatRoomInfo:
-    def __init__(self, ChatRoomId=""):
+    def __init__(self, ChatRoomId):
         self._ChatRoomId = ChatRoomId
 
     def getChatRoomId(self):
