@@ -38,7 +38,7 @@ class createRoomProtocolHandler:
             # the room exists
             isRoomExist = False
             for room in serverstate.ALL_CHAT_ROOMS:
-                if room.getId == self._roomid:
+                if room.getChatRoomId() == self._roomid:
                     isRoomExist = True
                     
             if isRoomExist :
