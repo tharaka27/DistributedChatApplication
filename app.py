@@ -13,6 +13,8 @@ from controllers.JSONMessageBuilder import MessageBuilder
 from models.localroominfo import LocalRoomInfo
 import os
 
+global mainHallName
+
 def connection_handler(connection,add):
 
 
@@ -30,16 +32,19 @@ def connection_handler(connection,add):
             if operation == 'newidentity':
 
                 print("[INFO] New Identity Request Received")
-                identity, response = newIdentityProtocolHandler(req).handle()
+                success,identity, response = newIdentityProtocolHandler(req).handle()
 
                 response = response + "\n"
                 print(response)
                 connection.send(response.encode('utf-8'))
+                
+                global mainHallName
+                if success:
+                    response2 = {"type" : "roomchange", "identity" : identity, \
+                        "former" : "", "roomid" : mainHallName}
+                    response2 = json.dumps(response2)+ "\n"
 
-                response2 = {"type" : "roomchange", "identity" : "tharaka", "former" : "", "roomid" : "MainHall-s1"}
-                response2 = json.dumps(response2)+ "\n"
-
-                connection.send(response2.encode("utf-8"))
+                    connection.send(response2.encode("utf-8"))
             
             
             elif operation == 'createroom':
@@ -112,6 +117,7 @@ if __name__ == "__main__":
 
     # add main hall to the local chat room set
     print("[INFO] Creating the mainhall in the server")
+    global mainHallName
     mainHallName =  "MainHall-" + serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
     chat_room_instance = LocalRoomInfo()
     chat_room_instance.setChatRoomID(mainHallName)

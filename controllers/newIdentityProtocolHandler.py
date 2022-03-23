@@ -17,14 +17,14 @@ class newIdentityProtocolHandler:
 
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
-            return self._message_builder.coordinatorNotAlive(self._protocol)
+            return False, self._message_builder.coordinatorNotAlive(self._protocol)
 
         # check whether I am coordinator
         if serverstate.AMICOORDINATOR:
             # the user exists
             if self._name in serverstate.ALL_USERS :
                 print("[INFO] Handling new identity inside AMICOORDINATOR. User exists")
-                return self._name, self._message_builder.newIdentity("False")
+                return False,self._name, self._message_builder.newIdentity("False")
 
             else:
                 print("[INFO] Handling new identity inside AMICOORDINATOR. User does not exist")
@@ -41,7 +41,7 @@ class newIdentityProtocolHandler:
                     print("[Error] Error occured while distributing the new identity")
 
                 print("[INFO] FINISHED")
-                return self._name,self._message_builder.newIdentity("True") 
+                return True,self._name,self._message_builder.newIdentity("True") 
 
         else:
             # forward the message to the coordinator
@@ -59,6 +59,6 @@ class newIdentityProtocolHandler:
             if message["approved"] == "True" :
                 serverstate.ALL_USERS.append(self._name)
                 serverstate.LOCAL_USERS.append(self._name)
-                return self._name,self._message_builder.newIdentity("True") 
+                return True,self._name,self._message_builder.newIdentity("True") 
             else:
-                return self._name,self._message_builder.newIdentity("False") 
+                return False,self._name,self._message_builder.newIdentity("False") 
