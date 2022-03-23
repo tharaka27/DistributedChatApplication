@@ -14,13 +14,15 @@ class newIdentityProtocolHandler:
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
+        print("[INFO] Handling new identity request started.")
+
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
             return self._message_builder.coordinatorNotAlive(self._protocol)
 
         # check whether I am coordinator
         if serverstate.AMICOORDINATOR:
-
+            print("[INFO] Handling new identity inside AMICOORDINATOR.")
             # the user exists
             if self._name in serverstate.ALL_USERS :
                 return self._message_builder.newIdentity("False")

@@ -14,7 +14,7 @@ LOCAL_SERVER_CONFIGURATION = ServerConfiguration("DEFAULT", "localhost", "5000",
 REMOTE_SERVER_CONFIGURATIONS = []
 
 # list of chat rooms in this server
-LOCAL_CHAT_ROOMS = []
+LOCAL_CHAT_ROOMS = {}
 
 # list of remote chat rooms in other servers
 REMOTE_CHAT_ROOMS = []

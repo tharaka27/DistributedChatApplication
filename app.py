@@ -29,6 +29,16 @@ def connection_handler(connection,add):
                 print("[INFO] New Identity Request Received")
 
                 # ----------------- dummy testing -----------------
+                response = newIdentityProtocolHandler(req).handle()
+                response = response + "\n"
+                print(response)
+                connection.send(response.encode('utf-8'))
+
+                response2 = {"type" : "roomchange", "identity" : "tharaka", "former" : "", "roomid" : "MainHall-s1"}
+                response2 = json.dumps(response2)+ "\n"
+
+                connection.send(response2.encode("utf-8"))
+                '''
                 response = {"type":"newidentity","approved":"true"}
                 response = json.dumps(response) + "\n"
         
@@ -38,11 +48,13 @@ def connection_handler(connection,add):
                 response2 = json.dumps(response2)+ "\n"
 
                 connection.send(response2.encode("utf-8"))
+                '''
 
                 
         except:
             print("Error occured in client ",identity,"!")
             connection.close()
+            quit()
             continue
 
 def Main():

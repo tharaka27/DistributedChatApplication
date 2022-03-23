@@ -1,6 +1,4 @@
-from flask import jsonify
 import json
-
 
 # IMPORTANT !!!
 #
@@ -29,11 +27,11 @@ class MessageBuilder:
         message = {}
         message["type"] = "newidentity"
         message["approved"] = str(approve)
-        return jsonify(message)
+        return json.dumps(message)
 
     def coordinatorNotAlive(self, protocol):
         print("[Error] Coordinator not alive" + protocol + " cannot execute")
-        return jsonify({"error" : "Coordinator not alive"})
+        return json.dumps({"error" : "Coordinator not alive"})
 
     def createNewIdentity(self, approve):
         message = {}
