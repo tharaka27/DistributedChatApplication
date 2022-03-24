@@ -119,6 +119,7 @@ class Bully:
                                     serverstate.ALL_USERS.append(request['task']["identity"])
                                     print("[INFO] Added new user {} to the ALL_USERS ".format(\
                                         request['task']["identity"]))
+                            
                             elif request['task']['type'] == 'create_chat_room':
                                 isRoomExist = False
                                 for room in serverstate.ALL_CHAT_ROOMS:
@@ -216,6 +217,11 @@ class Bully:
                         serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                         print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
                                     req["roomid"]))
+                        
+                        message = { "type" : "create_chat_room" , "identity" : req['identity'],\
+                            "server": req["server"], "roomid" : req['roomid']}
+                        self.task_list.append(message)
+                                
                         self.socket.send_string(self.msg_builder.createNewChatRoom(True)) 
                     else:
                         self.socket.send_string(self.msg_builder.createNewChatRoom(False)) 

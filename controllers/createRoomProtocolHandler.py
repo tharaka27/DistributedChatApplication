@@ -57,6 +57,15 @@ class createRoomProtocolHandler:
 
                 # add to the global chat room list
                 serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
+
+                # distribute to the other servers
+                message = { "type" : "create_chat_room" , "identity" : self._identity,\
+                 "server": self._local_server_name, "roomid" : self._roomid}
+                try:
+                    self._bully_instance.task_list.append(message)
+                except :
+                    print("[Error] Error occured while distributing the new chatroom")
+
                 return True, self._roomid, self._message_builder.newChatRoom(self._roomid,"True") 
 
         else:
@@ -89,10 +98,8 @@ class createRoomProtocolHandler:
 
                     # add to the global chat room list
                     serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
-                    print("Camee here")
                     return True, self._roomid, self._message_builder.newChatRoom(self._roomid,"True")  
                 else:
-                    print("Camee here2")
                     return False, self._roomid, self._message_builder.newChatRoom(self._roomid,"False") 
             except Exception as e :
                 print(e)
