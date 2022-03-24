@@ -8,7 +8,10 @@ from controllers.newIdentityProtocolHandler import newIdentityProtocolHandler
 from controllers.createRoomProtocolHandler import createRoomProtocolHandler
 from controllers.whoProtocolHandler import whoProtocolHandler
 from controllers.joinRoomProtocolHandler import joinRoomProtocolHandler
+from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
+from controllers.deleteRoomProtocolHandler import deleteRoomProtocolHandler
+from controllers.quitProtocolHandler import quitProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -18,6 +21,7 @@ import os
 
 global mainHallName
 global broadcast_pool
+
 broadcast_pool = {}
 
 Messages = {}
@@ -100,6 +104,7 @@ def connection_handler(connection,add):
 
                     broadcast_pool[old_room].append(response2)
                     broadcast_pool[chatroomid] = []
+                    Messages[chatroomid] = []
 
                     connection.send(response2.encode("utf-8"))
 
@@ -152,16 +157,92 @@ def connection_handler(connection,add):
                 print(Messages[chatroomid])
                 #connection.send(response.encode('utf-8'))
 
-            
+            elif operation == "movejoin":
+
+                print("[INFO] Move join Request Received")
+
+                identity = req['identity'] 
+                broadcast,response = moveJoinProtocolHandler(identity,req['former'],req).handle()
+
+                response = response + "\n"
+
+                if (broadcast):
+                    response2 = {"type" : "roomchange", "identity" : identity, "former" : req['former'], "roomid" : req['roomid']}
+                    response2 = json.dumps(response2)+ "\n"
+                    broadcast_pool[req['roomid']].append(response)
+                    bd_index = len(broadcast_pool[req['roomid']])
+                    chatroomid = req['roomid']
+                    connection.send(response.encode('utf-8'))
+                else:
+                    broadcast_pool[mainHallName].append(response)
+                    bd_index = len(broadcast_pool[req['roomid']])
+                    chatroomid = mainHallName
+                    connection.send(response.encode('utf-8'))
+
+            elif operation == "deleteroom":
+
+                print("[INFO] Delete Room Request Received")
+                broadcast,members,response = deleteRoomProtocolHandler(identity,req).handle()
+
+                if broadcast:
+                    for m in members:
+                        msg = {"type" : "roomchange", "identity" : m, "former" : req['roomid'], "roomid" : mainHallName}
+                        msg = json.dumps(msg)+ "\n"
+                        broadcast_pool[req["roomid"]].append(msg)
+                
+                response =response + "\n"
+                connection.send(response.encode('utf-8'))
+
+            elif operation == "quit": 
+
+                print("[INFO] Quit Request Received")
+                state = quitProtocolHandler(identity).handle()
+
+                if state:
+
+                    #find rooms owned by user
+                    for r in serverstate.LOCAL_CHAT_ROOMS:
+                        r_owner = r.getOwner()
+
+                        if r_owner == identity:
+                            #owns a room
+                            room_id = r.getChatRoomId()
+                            # delete room handler
+                            data = {"roomid":room_id}
+                            broadcast,members,response = deleteRoomProtocolHandler(identity,data).handle()
+
+                            if broadcast:
+                                for m in members:
+                                    if m == identity:
+                                        continue
+                                    else:
+                                        msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
+                                        msg = json.dumps(msg)+ "\n"
+                                        broadcast_pool[room_id].append(msg)
+                            break
+                    
+                    
+                    response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
+                    response = json.dumps(response)+ "\n"
+                    connection.send(response.encode('utf-8'))
+                    connection.close()
+                else:
+                    print("cannot quit")
+                    
+
         except socket.timeout:
 
             time.sleep(1)
 
             if bd_index < (len(broadcast_pool[chatroomid])):
-                
-                print(bd_index,len(broadcast_pool[chatroomid]))
+            
                 while(bd_index < len(broadcast_pool[chatroomid])):
                     msg = broadcast_pool[chatroomid][bd_index]
+
+                    data = json.loads(msg)
+                    if data["type"] == "roomchange" and data["identity"] == identity:
+                        chatroomid = data["roomid"] 
+                    
                     connection.send(msg.encode('utf-8'))
                     bd_index = bd_index +1
             
@@ -170,8 +251,8 @@ def connection_handler(connection,add):
 
         except:
             print("Timeout occured in client ",identity,"!")
-            #connection.close()
-            #quit()
+            connection.close()
+            quit()
 
 def Main():
     # Server intialization

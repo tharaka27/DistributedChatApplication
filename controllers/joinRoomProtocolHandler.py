@@ -1,7 +1,6 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from flask import jsonify
 from algorithms.fastbully import Bully 
 from models.localroominfo import LocalRoomInfo
 import json
@@ -18,7 +17,7 @@ class joinRoomProtocolHandler:
         
     def handle(self):
 
-        print("[INFO] Handling new identity request started.")
+        print("[INFO] Handling joinroom request started.")
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
             return self._message_builder.coordinatorNotAlive(self._protocol)
