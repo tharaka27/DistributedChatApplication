@@ -137,7 +137,6 @@ class Bully:
                             
                             elif request['task']['type'] == 'deleteroom':
                                 
-                                print ("ok im in")
                                 roomid = request['task']['roomid']
 
                                 for r in serverstate.ALL_CHAT_ROOMS:
@@ -146,6 +145,19 @@ class Bully:
 
                                     if r_id == roomid:
                                         serverstate.ALL_CHAT_ROOMS.remove(r)
+                                        break
+                                
+                                print("[INFO] removed chatroom {} from server".format(\
+                                        request['task']["roomid"]))
+                            
+                            elif request['task']['type'] == 'quit':
+                                
+                                id = request['task']['identity']
+
+                                for u in serverstate.ALL_USERS:
+
+                                    if u == id:
+                                        serverstate.ALL_USERS.remove(u)
                                         break
                                 
                                 print("[INFO] removed chatroom {} from server".format(\
@@ -229,6 +241,29 @@ class Bully:
 
                     if(deleted):
                         self.task_list.append({"type" : "deleteroom","serverid": self._serverid,"roomid":self._delete_room})
+                        self.socket.send_string(self.msg_builder.approved(True)) 
+                    else:
+                        self.socket.send_string(self.msg_builder.approved(False)) 
+                
+                elif req['type'] == 'quit' and self.id == self.coor_id:
+
+                    print("[INFO] Received quit task")
+
+                    id = request['task']['identity']
+
+                    deleted = False
+
+                    for u in serverstate.ALL_USERS:
+
+                        if u == id:
+                            serverstate.ALL_USERS.remove(u)
+                            deleted = True
+                            break
+
+                    # send message to all servers through pub-sub scheme
+
+                    if(deleted):
+                        self.task_list.append({"type" : "quit","identity": self._identity})
                         self.socket.send_string(self.msg_builder.approved(True)) 
                     else:
                         self.socket.send_string(self.msg_builder.approved(False)) 

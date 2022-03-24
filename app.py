@@ -11,6 +11,7 @@ from controllers.joinRoomProtocolHandler import joinRoomProtocolHandler
 from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
 from controllers.deleteRoomProtocolHandler import deleteRoomProtocolHandler
+from controllers.quitProtocolHandler import quitProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -179,7 +180,7 @@ def connection_handler(connection,add):
 
                 print("[INFO] Delete Room Request Received")
                 broadcast,members,response = deleteRoomProtocolHandler(identity,req).handle()
-                
+
                 if broadcast:
                     for m in members:
                         msg = {"type" : "roomchange", "identity" : m, "former" : req['roomid'], "roomid" : mainHallName}
@@ -189,6 +190,42 @@ def connection_handler(connection,add):
                 response =response + "\n"
                 connection.send(response.encode('utf-8'))
 
+            elif operation == "quit": 
+
+                print("[INFO] Quit Request Received")
+                state = quitProtocolHandler(identity).handle()
+
+                if state:
+
+                    #find rooms owned by user
+                    for r in serverstate.LOCAL_CHAT_ROOMS:
+                        r_owner = r.getOwner()
+
+                        if r_owner == identity:
+                            #owns a room
+                            room_id = r.getChatRoomId()
+                            # delete room handler
+                            data = {"roomid":room_id}
+                            broadcast,members,response = deleteRoomProtocolHandler(identity,data).handle()
+
+                            if broadcast:
+                                for m in members:
+                                    if m == identity:
+                                        continue
+                                    else:
+                                        msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
+                                        msg = json.dumps(msg)+ "\n"
+                                        broadcast_pool[room_id].append(msg)
+                            break
+                    
+                    
+                    response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
+                    response = json.dumps(response)+ "\n"
+                    connection.send(response.encode('utf-8'))
+                    connection.close()
+                else:
+                    print("cannot quit")
+                    
 
         except socket.timeout:
 
