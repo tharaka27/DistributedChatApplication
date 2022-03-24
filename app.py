@@ -40,9 +40,10 @@ def connection_handler(connection,add):
         if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
             buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
                 "content" : Messages[chatroomid][local_chat_pointer][1]}
-            local_chat_pointer = local_chat_pointer + 1
             buffer_json = json.dumps(buffer) + "\n"
-            connection.send(buffer_json.encode('utf-8'))
+            local_chat_pointer = local_chat_pointer + 1
+            if not(identity == Messages[chatroomid][local_chat_pointer-1][0]):
+                connection.send(buffer_json.encode('utf-8'))
         
         
         try:
@@ -101,6 +102,8 @@ def connection_handler(connection,add):
                     broadcast_pool[chatroomid] = []
 
                     connection.send(response2.encode("utf-8"))
+
+                    Messages[chatroomid] = []
                 else:
                     # if unsuccessful set the chatroomid back to mainhall
                     chatroomid = mainHallName
@@ -151,6 +154,8 @@ def connection_handler(connection,add):
 
             
         except socket.timeout:
+
+            time.sleep(1)
 
             if bd_index < (len(broadcast_pool[chatroomid])):
                 
