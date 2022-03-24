@@ -12,6 +12,7 @@ from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
 from controllers.deleteRoomProtocolHandler import deleteRoomProtocolHandler
 from controllers.quitProtocolHandler import quitProtocolHandler
+from controllers.listProtocolHandler import listProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.bully import Bully
@@ -192,6 +193,14 @@ def connection_handler(connection,add):
                 
                 response =response + "\n"
                 connection.send(response.encode('utf-8'))
+            
+            elif operation == "list":
+
+                print("[INFO] List Room Request Received")
+                response = listProtocolHandler().handle()
+
+                response =response + "\n"
+                connection.send(response.encode('utf-8'))
 
             elif operation == "quit": 
 
@@ -310,6 +319,11 @@ if __name__ == "__main__":
     chat_room_instance.setCoordinator(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName())
 
     serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)
+
+
+    # TODO create correct logic
+    serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
+
     broadcast_pool[mainHallName] = []
 
     print(serverstate.LOCAL_CHAT_ROOMS)

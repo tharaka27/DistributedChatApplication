@@ -108,3 +108,9 @@ class MessageBuilder:
         message = {}    
         message["approved"] = status
         return json.dumps(message)
+
+    def listProtocol(self, rooms):
+        message = {}
+        message["type"] = "roomlist"
+        message["rooms"] = rooms
+        return json.dumps(message)
