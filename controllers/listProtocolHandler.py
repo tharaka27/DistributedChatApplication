@@ -5,10 +5,9 @@ from algorithms.bully import Bully
 import json
 import time
 
-class newIdentityProtocolHandler:
+class listProtocolHandler:
     def __init__(self, json_data):
-        self._protocol = "newidentity"
-        self._name = json_data["identity"]
+        self._protocol = "list"
         self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         
@@ -18,12 +17,6 @@ class newIdentityProtocolHandler:
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
             return False, self._message_builder.coordinatorNotAlive(self._protocol)
-
-        # imposing strict rules for the name
-        name = str(self._name)
-        
-        if len(self._name) < 3 or len(self._name) > 16 or name[0].isdigit():
-            return False,self._name, self._message_builder.newIdentity("False")
 
         # check whether I am coordinator
         if serverstate.AMICOORDINATOR:

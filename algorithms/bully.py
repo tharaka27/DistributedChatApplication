@@ -119,10 +119,11 @@ class Bully:
                                     serverstate.ALL_USERS.append(request['task']["identity"])
                                     print("[INFO] Added new user {} to the ALL_USERS ".format(\
                                         request['task']["identity"]))
+                            
                             elif request['task']['type'] == 'create_chat_room':
                                 isRoomExist = False
                                 for room in serverstate.ALL_CHAT_ROOMS:
-                                    if room.getId == self._roomid:
+                                    if room.getChatRoomId() == self._roomid:
                                         isRoomExist = True
                                 
                                 if not(isRoomExist):
@@ -130,8 +131,37 @@ class Bully:
                                     chat_room_instance.setChatRoomID(request['task']['roomid'])
                                     chat_room_instance.setOwner(request['task']['identity'])
                                     chat_room_instance.setCoordinator(request['task']['server'])
+                                    chat_room_instance.addMember(request['task']['identity'])
                                     serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                                     print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
+                                        request['task']["roomid"]))
+                            
+                            elif request['task']['type'] == 'deleteroom':
+                                
+                                roomid = request['task']['roomid']
+
+                                for r in serverstate.ALL_CHAT_ROOMS:
+                                    
+                                    r_id = r.getChatRoomId()
+
+                                    if r_id == roomid:
+                                        serverstate.ALL_CHAT_ROOMS.remove(r)
+                                        break
+                                
+                                print("[INFO] removed chatroom {} from server".format(\
+                                        request['task']["roomid"]))
+                            
+                            elif request['task']['type'] == 'quit':
+                                
+                                id = request['task']['identity']
+
+                                for u in serverstate.ALL_USERS:
+
+                                    if u == id:
+                                        serverstate.ALL_USERS.remove(u)
+                                        break
+                                
+                                print("[INFO] removed chatroom {} from server".format(\
                                         request['task']["roomid"]))
 
                 except:
@@ -174,7 +204,7 @@ class Bully:
                 elif req['type'] == 'create_chat_room' and self.id == self.coor_id:
                     isRoomExist = False
                     for room in serverstate.ALL_CHAT_ROOMS:
-                        if room.getId == req['roomid']:
+                        if room.getChatRoomId() == req['roomid']:
                             isRoomExist = True
                                 
                     if not(isRoomExist):
@@ -183,13 +213,66 @@ class Bully:
                         chat_room_instance.setChatRoomID(req['roomid'])
                         chat_room_instance.setOwner(req['identity'])
                         chat_room_instance.setCoordinator(req['server'])
+                        chat_room_instance.addMember(req['identity'])
                         serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                         print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
                                     req["roomid"]))
+                        
+                        message = { "type" : "create_chat_room" , "identity" : req['identity'],\
+                            "server": req["server"], "roomid" : req['roomid']}
+                        self.task_list.append(message)
+                                
                         self.socket.send_string(self.msg_builder.createNewChatRoom(True)) 
                     else:
                         self.socket.send_string(self.msg_builder.createNewChatRoom(False)) 
 
+                elif req['type'] == 'deleteroom' and self.id == self.coor_id:
+
+                    print("[INFO] Received delete room task")
+
+                    roomid = req['roomid']
+                    serverid = req['serverid']
+                    deleted = False
+
+                    for r in serverstate.ALL_CHAT_ROOMS:
+                                    
+                        r_id = r.getChatRoomId()
+
+                        if r_id == roomid:
+                            serverstate.ALL_CHAT_ROOMS.remove(r)
+                            deleted = True
+                            break
+
+                    # send message to all servers through pub-sub scheme
+
+                    if(deleted):
+                        self.task_list.append({"type" : "deleteroom","serverid": serverid,"roomid":roomid})
+                        self.socket.send_string(self.msg_builder.approved(True)) 
+                    else:
+                        self.socket.send_string(self.msg_builder.approved(False)) 
+                
+                elif req['type'] == 'quit' and self.id == self.coor_id:
+
+                    print("[INFO] Received quit task")
+
+                    id = req['identity']
+
+                    deleted = False
+
+                    for u in serverstate.ALL_USERS:
+
+                        if u == id:
+                            serverstate.ALL_USERS.remove(u)
+                            deleted = True
+                            break
+
+                    # send message to all servers through pub-sub scheme
+
+                    if(deleted):
+                        self.task_list.append({"type" : "quit","identity": id})
+                        self.socket.send_string(self.msg_builder.approved(True)) 
+                    else:
+                        self.socket.send_string(self.msg_builder.approved(False)) 
 
                 else:
                     self.socket.send_string(self.msg_builder.errorServer())

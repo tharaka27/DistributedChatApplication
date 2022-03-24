@@ -1,61 +1,85 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from flask import jsonify
 from algorithms.fastbully import Bully 
+from models.localroominfo import LocalRoomInfo
 import json
 import time
 
 class joinRoomProtocolHandler:
-    def __init__(self, json_data):
+    def __init__(self,identity, current_room,json_data):
         self._protocol = "joinroom"
-        self._roomid = json_data["roomid"]
+        self._next_room = json_data["roomid"]
+        self._identity = identity
+        self._current_room = current_room
         self._bully_instance = Bully._instance
-        print( "Bully instance in new Identity" )
-        print(self._bully_instance)
+        self._message_builder = MessageBuilder._instance
         
     def handle(self):
+
+        print("[INFO] Handling joinroom request started.")
         # check whether coordinator is alive
         if not(serverstate.ISCOORDINATORALIVE):
-            print("[Error] Coordinator not alive")
-            return jsonify({"error" : "Coordinator not alive"})
+            return self._message_builder.coordinatorNotAlive(self._protocol)
+
+        current_room_instance = LocalRoomInfo()
+        # check weather identity is the admin in current room
+        for r in serverstate.LOCAL_CHAT_ROOMS:
+            room_id = r.getChatRoomId()
+            if room_id == self._current_room:
+                
+                current_room_instance = r
+
+                admin = r.getOwner()
+                if admin == self._identity :
+                    # identity is the current owner therefore cannot go to room
+                    return "n",self._message_builder.roomChange(self._identity,self._current_room,self._current_room)
+                else:
+                    # not the admin in current room can move
+                    print("[INFO] Not the admin in current room can move")
+                    break
+
+
+        # check weather the reuested room in local server
+        for r in serverstate.ALL_CHAT_ROOMS:
+
+            room_id = r.getChatRoomId()
+
+            if room_id == self._next_room:
+
+                r_cod = r.getCoordinator()
+                if r_cod == serverstate.LOCAL_SERVER_CONFIGURATION.getServerName():
+                    #room found in same server
+                    current_room_instance.removeMember(self._identity)
+                    r.addMember(self._identity)
+                    return "b",self._message_builder.roomChange(self._identity,self._current_room,self._next_room)
+                
+                else:
+                    #room found in a remote server
+                    print("room in a remote server")
+                    current_room_instance.removeMember(self._identity)
+                    serverstate.LOCAL_USERS.remove(self._identity)
+                    host = ""
+                    port = ""
+                    for s in serverstate.REMOTE_SERVER_CONFIGURATIONS:
+
+                        s_name = s.getServerName()
+                        print(s_name,r_cod)
+                        if s_name == r_cod:
+                            host = s.getAddress()
+                            port = s.getClientPort()
+                            print("its ok")
+                            return "o",self._message_builder.route(self._next_room,host,port)
+        
+        # not found in rooms -> room does not exist
+        return "n",self._message_builder.roomChange(self._identity,self._current_room,self._current_room)
+
+
+
+
+
+
+                    
 
         
-        local_roomIDs = serverstate.LOCAL_CHAT_ROOMS.keys()
-        all_roomIDs = local_roomIDs + serverstate.REMOTE_CHAT_ROOMS
-
-        # check whether requested room exists in any server
-        if self._roomid in all_roomIDs:
-
-            #check weather room exists in local server
-            if self._roomid in local_roomIDs:
-                print("room change broadcast")
-                #broadcast roomchange message to all users in new room as well as old room
-
-        else:
-            # room does not exist
-            # send roomchange with source and destination set to same
-            # forward the message to the coordinator
-            print("[INFO] Forwardig the create_identity request to coordinator")
-            message = { "type" : "create_identity" , "identity" : self._name}
-            #self._bully_instance.socket2.send_string(json.dumps(message))
-            #request =  self._bully_instance.socket2.recv_string()
-            #req = json.loads(request)
-            #print("[INFO] Received the ", request)
-
-            self._bully_instance.send_buffer.append(message)
-
-            while(len(self._bully_instance.receive_buffer) == 0):
-                time.sleep(1)
-            
-            print("[Received]", end="")
-            message = json.loads(self._bully_instance.receive_buffer.pop(0))
-            print(message)
-            if message["approved"] == "True" :
-                serverstate.ALL_USERS.append(self._name)
-                serverstate.LOCAL_USERS.append(self._name)
-                return jsonify({ "type" : "newidentity" ,"approved": "True"})
-
-            else:
-                return jsonify({ "type" : "newidentity" ,"approved": "False"})
         

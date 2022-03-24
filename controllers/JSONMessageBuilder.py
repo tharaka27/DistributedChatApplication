@@ -1,5 +1,7 @@
 import json
 
+from models import serverstate
+
 # IMPORTANT !!!
 #
 # For server to server communication use -> json.dumps
@@ -64,5 +66,46 @@ class MessageBuilder:
         message = { "type" : "error message" }
         return json.dumps(message)
 
+    def whoProtocol(self, roomid, identities, owner):
+        message = {}
+        message["type"] = "roomcontents"
+        message["roomid"] = roomid
+        message["identities"] = identities
+        message["owner"] = owner
+        return json.dumps(message)
 
+    def roomChange(self,id,current,next):
+        message = {}    
+        message["type"] = "roomchange"
+        message["identity"] = id
+        message["former"] = current
+        message["roomid"] = next
+        return json.dumps(message)
     
+    def route(self,id,host,port):
+        message = {}    
+        message["type"] = "route"
+        message["roomid"] = id
+        message["host"] = host
+        message["port"] = port
+        print(message)
+        return json.dumps(message)
+    
+    def serverChange(self,status):
+        message = {}    
+        message["type"] = "serverchange"
+        message["approved"] = status
+        message["serverid"] = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
+        return json.dumps(message)
+
+    def deleteRoom(self,roomid,status):
+        message = {}    
+        message["type"] = "deleteroom"
+        message["roomid"] = roomid
+        message["approved"] = status
+        return json.dumps(message)
+    
+    def approved(self,status):
+        message = {}    
+        message["approved"] = status
+        return json.dumps(message)
