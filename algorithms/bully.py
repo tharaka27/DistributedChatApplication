@@ -134,6 +134,22 @@ class Bully:
                                     serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
                                     print("[INFO] Added new chatroom {} to the ALL_CHAT_ROOMS ".format(\
                                         request['task']["roomid"]))
+                            
+                            elif request['task']['type'] == 'deleteroom':
+                                
+                                print ("ok im in")
+                                roomid = request['task']['roomid']
+
+                                for r in serverstate.ALL_CHAT_ROOMS:
+                                    
+                                    r_id = r.getChatRoomId()
+
+                                    if r_id == roomid:
+                                        serverstate.ALL_CHAT_ROOMS.remove(r)
+                                        break
+                                
+                                print("[INFO] removed chatroom {} from server".format(\
+                                        request['task']["roomid"]))
 
                 except:
 
@@ -192,6 +208,30 @@ class Bully:
                     else:
                         self.socket.send_string(self.msg_builder.createNewChatRoom(False)) 
 
+                elif req['type'] == 'deleteroom' and self.id == self.coor_id:
+
+                    print("[INFO] Received delete room task")
+
+                    roomid = request['task']['roomid']
+
+                    deleted = False
+
+                    for r in serverstate.ALL_CHAT_ROOMS:
+                                    
+                        r_id = r.getChatRoomId()
+
+                        if r_id == roomid:
+                            serverstate.ALL_CHAT_ROOMS.remove(r)
+                            deleted = True
+                            break
+
+                    # send message to all servers through pub-sub scheme
+
+                    if(deleted):
+                        self.task_list.append({"type" : "deleteroom","serverid": self._serverid,"roomid":self._delete_room})
+                        self.socket.send_string(self.msg_builder.approved(True)) 
+                    else:
+                        self.socket.send_string(self.msg_builder.approved(False)) 
 
                 else:
                     self.socket.send_string(self.msg_builder.errorServer())

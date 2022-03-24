@@ -104,3 +104,7 @@ class MessageBuilder:
         message["approved"] = status
         return json.dumps(message)
     
+    def approved(self,status):
+        message = {}    
+        message["approved"] = status
+        return json.dumps(message)
