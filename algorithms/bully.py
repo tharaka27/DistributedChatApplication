@@ -123,7 +123,7 @@ class Bully:
                             elif request['task']['type'] == 'create_chat_room':
                                 isRoomExist = False
                                 for room in serverstate.ALL_CHAT_ROOMS:
-                                    if room.getId == self._roomid:
+                                    if room.getChatRoomId() == self._roomid:
                                         isRoomExist = True
                                 
                                 if not(isRoomExist):
@@ -204,7 +204,7 @@ class Bully:
                 elif req['type'] == 'create_chat_room' and self.id == self.coor_id:
                     isRoomExist = False
                     for room in serverstate.ALL_CHAT_ROOMS:
-                        if room.getId == req['roomid']:
+                        if room.getChatRoomId() == req['roomid']:
                             isRoomExist = True
                                 
                     if not(isRoomExist):
@@ -230,8 +230,8 @@ class Bully:
 
                     print("[INFO] Received delete room task")
 
-                    roomid = request['task']['roomid']
-
+                    roomid = req['roomid']
+                    serverid = req['serverid']
                     deleted = False
 
                     for r in serverstate.ALL_CHAT_ROOMS:
@@ -246,7 +246,7 @@ class Bully:
                     # send message to all servers through pub-sub scheme
 
                     if(deleted):
-                        self.task_list.append({"type" : "deleteroom","serverid": self._serverid,"roomid":self._delete_room})
+                        self.task_list.append({"type" : "deleteroom","serverid": serverid,"roomid":roomid})
                         self.socket.send_string(self.msg_builder.approved(True)) 
                     else:
                         self.socket.send_string(self.msg_builder.approved(False)) 
@@ -255,7 +255,7 @@ class Bully:
 
                     print("[INFO] Received quit task")
 
-                    id = request['task']['identity']
+                    id = req['identity']
 
                     deleted = False
 
@@ -269,7 +269,7 @@ class Bully:
                     # send message to all servers through pub-sub scheme
 
                     if(deleted):
-                        self.task_list.append({"type" : "quit","identity": self._identity})
+                        self.task_list.append({"type" : "quit","identity": id})
                         self.socket.send_string(self.msg_builder.approved(True)) 
                     else:
                         self.socket.send_string(self.msg_builder.approved(False)) 

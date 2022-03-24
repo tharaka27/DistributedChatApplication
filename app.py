@@ -162,6 +162,7 @@ def connection_handler(connection,add):
                 print("[INFO] Move join Request Received")
 
                 identity = req['identity'] 
+                ifFirstTime = False
                 broadcast,response = moveJoinProtocolHandler(identity,req['former'],req).handle()
 
                 response = response + "\n"
@@ -169,13 +170,15 @@ def connection_handler(connection,add):
                 if (broadcast):
                     response2 = {"type" : "roomchange", "identity" : identity, "former" : req['former'], "roomid" : req['roomid']}
                     response2 = json.dumps(response2)+ "\n"
-                    broadcast_pool[req['roomid']].append(response)
+                    broadcast_pool[req['roomid']].append(response2)
+                    Messages[req['roomid']] = []
                     bd_index = len(broadcast_pool[req['roomid']])
                     chatroomid = req['roomid']
                     connection.send(response.encode('utf-8'))
+                    connection.send(response2.encode('utf-8'))
                 else:
                     broadcast_pool[mainHallName].append(response)
-                    bd_index = len(broadcast_pool[req['roomid']])
+                    bd_index = len(broadcast_pool[mainHallName])
                     chatroomid = mainHallName
                     connection.send(response.encode('utf-8'))
 
@@ -226,6 +229,7 @@ def connection_handler(connection,add):
                     response = json.dumps(response)+ "\n"
                     connection.send(response.encode('utf-8'))
                     connection.close()
+                    quit()
                 else:
                     print("cannot quit")
                     
@@ -250,9 +254,42 @@ def connection_handler(connection,add):
 
 
         except:
-            print("Timeout occured in client ",identity,"!")
-            connection.close()
-            quit()
+            # think client send a quit message
+            print("[INFO] Quit Request Received")
+            state = quitProtocolHandler(identity).handle()
+
+            if state:
+
+                #find rooms owned by user
+                for r in serverstate.LOCAL_CHAT_ROOMS:
+                    r_owner = r.getOwner()
+
+                    if r_owner == identity:
+                        #owns a room
+                        room_id = r.getChatRoomId()
+                        # delete room handler
+                        data = {"roomid":room_id}
+                        broadcast,members,response = deleteRoomProtocolHandler(identity,data).handle()
+
+                        if broadcast:
+                            for m in members:
+                                if m == identity:
+                                    continue
+                                else:
+                                    msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
+                                    msg = json.dumps(msg)+ "\n"
+                                    broadcast_pool[room_id].append(msg)
+                        break
+                
+                
+                response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
+                response = json.dumps(response)+ "\n"
+                connection.send(response.encode('utf-8'))
+                connection.close()
+                quit()
+            else:
+                print("cannot quit")
+
 
 def Main():
     # Server intialization

@@ -88,6 +88,7 @@ class MessageBuilder:
         message["roomid"] = id
         message["host"] = host
         message["port"] = port
+        print(message)
         return json.dumps(message)
     
     def serverChange(self,status):
