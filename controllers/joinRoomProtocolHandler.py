@@ -66,6 +66,7 @@ class joinRoomProtocolHandler:
                         if s_name == r_cod:
                             host = s.getAddress()
                             port = s.getClientPort()
+                            serverstate.LOCAL_USERS.remove(self._identity)
                             return "o",self._message_builder.route(self._next_room,host,port)
         
         # not found in rooms -> room does not exist
