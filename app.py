@@ -41,7 +41,7 @@ def connection_handler(connection,add):
     connection.settimeout(3)
 
     while True:
-        print("still working ..")
+        # print("still working ..")
         if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
             buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
                 "content" : Messages[chatroomid][local_chat_pointer][1]}

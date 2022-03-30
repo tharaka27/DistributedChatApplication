@@ -303,7 +303,13 @@ class FastBully:
 
                 elif req['type'] == 'IamUp': 
                     print("[INFO] Someone is up again",self.id)
-                    message = {'type' : 'view','current_cod':self.coor_id}
+
+                    room_data = []
+
+                    for room in serverstate.ALL_CHAT_ROOMS:
+                        room_data.append(room.__dict__)
+
+                    message = {'type' : 'view','current_cod':self.coor_id,'rooms':room_data,'ids':serverstate.ALL_USERS}
                     self.socket.send_string(json.dumps(message))  
 
                 elif req['type'] == 'Iam_Coord': 
@@ -521,11 +527,26 @@ class FastBully:
                         r = json.loads(req)
                         if r['type'] == 'view':
                             print("view recived from Others...")
+                            print(r)
 
                             if view_expected:
                                 current_cord = r['current_cod']
+
+                                for room in r['rooms']:
+
+                                    room_instance = LocalRoomInfo()
+                                    room_instance.setChatRoomID(room["ChatRoomId"])
+                                    room_instance.setOwner(room["owner"])
+                                    room_instance.setCoordinator(room["coordinator"])
+                                    room_instance.setMembers(room["members"])
+                                    serverstate.ALL_CHAT_ROOMS.append(room_instance)
+                                
+                                serverstate.ALL_USERS = r["ids"]
+                                
+                                print("[INFO] Users and rooms updated from view message")
                                 other_servers_view = True
                                 view_expected = False
+
                         else:
                             self.receive_buffer.append(req)
 
@@ -626,7 +647,13 @@ class FastBully:
                 # I am up message 
                 elif (request['type'] == "IamUp"):
                     print("[INFO] Iam message recived from a new server")
-                    message = {'type' : 'view','current_cod':self.coor_id}
+
+                    room_data = []
+
+                    for room in serverstate.ALL_CHAT_ROOMS:
+                        room_data.append(room.__dict__)
+
+                    message = {'type' : 'view','current_cod':self.coor_id,'rooms':room_data,'ids':serverstate.ALL_USERS}
                     self.heart_socket.send_string(json.dumps(message))  
 
                 # View message
@@ -634,7 +661,21 @@ class FastBully:
                     print("[INFO] View message recived from Others...")
 
                     if view_expected:
+
                         current_cord = request['current_cod']
+
+                        for room in request['rooms']:
+                            room_instance = LocalRoomInfo()
+                            room_instance.setChatRoomID(room["ChatRoomId"])
+                            room_instance.setOwner(room["owner"])
+                            room_instance.setCoordinator(room["coordinator"])
+                            room_instance.setMembers(room["members"])
+                            serverstate.ALL_CHAT_ROOMS.append(room_instance)
+                        
+                        serverstate.ALL_USERS = request["ids"]
+
+                        print("[INFO] Users and rooms updated from view message")
+                        
                         other_servers_view = True
                         view_expected = False
 

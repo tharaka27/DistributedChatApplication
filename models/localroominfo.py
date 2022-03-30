@@ -42,6 +42,13 @@ class LocalRoomInfo (ChatRoomInfo):
 
     def getCoordinator(self):
         return self.coordinator
+    
+    def setMembers(self,member_list):
+        self.lock.acquire()
+        try:
+            self.members = member_list
+        finally:
+            self.lock.release()
 
 
     
