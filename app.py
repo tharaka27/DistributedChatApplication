@@ -263,7 +263,6 @@ def connection_handler(connection,add):
         except json.decoder.JSONDecodeError:
             continue
 
-        '''
         except:
             # think client send a quit message
             print("[INFO] Quit Request Received in unexpected quit of client")
@@ -294,7 +293,6 @@ def connection_handler(connection,add):
                 break
             else:
                 print("[INFO] Cannot quit")
-        '''
 
 
 def Main():

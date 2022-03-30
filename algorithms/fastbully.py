@@ -116,7 +116,6 @@ class FastBully:
         global Fast_enabled,coord_dead,election_started, send_iamUP,view_expected, current_cord,other_servers_view,proc
 
         first_time = True
-        election_first_time = True
 
         while True:
 
@@ -146,7 +145,7 @@ class FastBully:
                 while proc != 'coor':
                     
                     if send_iamUP :
-                        print("I am up sent")
+                        print("[INFO] Send I am up to other servers")
                         message = {'type' : 'IamUp'}
                         self.heart_socket.send_string(json.dumps(message)) 
                         send_iamUP = False
@@ -219,33 +218,34 @@ class FastBully:
 
             else: # goes if self.id < self.maxID
 
-                print("[INFO] id range :",self.id,self.max_id)
+                print("[INFO] high prority id range :",self.id," to ",self.max_id)
 
-                self.socket2 = self.context.socket(zmq.REQ)
-                self.socket2.setsockopt(zmq.RCVTIMEO, 3000) #TIMEOUT
-                self.connect_to_higher_ids()
+                elec_message = {'type' : 'election'}
 
-                for i in range (self.id+1,self.max_id+1):
+                for p in self.processes:
 
-                    elec_message = {'type' : 'election'}
-                    
-                    try:
-                        self.socket2.send_string(json.dumps(elec_message))
-                        res = self.socket2.recv_string()
-                        response = json.loads(res)
-                        print(response)
-                        print(response['id'])
-                        res_ids.append(response['id'])
+                    # changed to connect all
+                    if p.getId() > int(self.id):
 
-                    except:
-                        print("[INFO] Did not recieved a election response from a higher id")
-                        continue
+                        print("\n[INFO] Sending election message to server with priority :",p.getId())
+                        self.socket2 = self.context.socket(zmq.REQ)
+                        self.socket2.setsockopt(zmq.RCVTIMEO, 3000) #TIMEOUT
+                        self.socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
+                        try:
+                            self.socket2.send_string(json.dumps(elec_message))
+                            res = self.socket2.recv_string()
+                            response = json.loads(res)
+                            res_ids.append(response['id'])
+                            print("[INFO] Recived a response for election message")
+
+                        except:
+                            print("[INFO] Did not recieved a rersponse for election message")
+                            continue
                             
                             
-                print(len(res_ids))
+                print("[INFO] Number of candidates for coordinator ->",len(res_ids))
+
                 if (len(res_ids)> 0 and coord_dead):
-
-                    print("[INFO] There are coordinate candidates")
 
                     # Send nomination
                     while ((len(res_ids) > 0) and (not(accepted)) and (coord_dead)):
@@ -254,25 +254,31 @@ class FastBully:
                         message = {'type' : 'nomination','id':selected_cord}
                         print("[INFO] Selected coordinator :",selected_cord)
 
-                        self.socket2 = self.context.socket(zmq.REQ)
-                        self.socket2.setsockopt(zmq.RCVTIMEO, 3000) #TIMEOUT
-                        self.connect_to_higher_ids()
+                        for p in self.processes:
 
-                        for i in range (self.id+1,self.max_id+1):
-                            # try:
-                            self.socket2.send_string(json.dumps(message))
-                            res2 = self.socket2.recv_string()
-                            response2 = json.loads(res2)
-                            print(response2)
-                            if(response2['type'] == "coordinator" and response2['status'] == "accepted"):
-                                print("[Info] New coordinator appointed !")
-                                coordinator_found = True
-                                accepted = True
-                                return True
+                            # changed to connect all
+                            if p.getId() == selected_cord:
 
-                            # except:
-                            #     print("[info] Nomination not accepted")
-                            #     # Previous process did not respond
+                                self.socket2 = self.context.socket(zmq.REQ)
+                                self.socket2.setsockopt(zmq.RCVTIMEO, 3000) #TIMEOUT
+                                self.socket2.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
+                                try:
+                                    print("\n[INFO] Sending nomination to the selected server")
+                                    self.socket2.send_string(json.dumps(message))
+                                    res2 = self.socket2.recv_string()
+                                    response2 = json.loads(res2)
+                                    print(response2)
+                                    if(response2['type'] == "coordinator" and response2['status'] == "accepted"):
+                                        print("[INFO] Candidate accepted nomination")
+                                        print("[INFO] New coordinator appointed !")
+                                        coordinator_found = True
+                                        accepted = True
+                                        return True
+
+                                except:
+                                    print("[INFO] Nomination was not accepted by the candidate")
+                                    print("[INFO] Moving to next candidate")
+                                    continue
 
                         res_ids.remove(selected_cord)
                     
@@ -309,7 +315,7 @@ class FastBully:
                     self.socket.send_string(json.dumps(message))   
 
                 elif req['type'] == 'IamUp': 
-                    print("[INFO] Someone is up again",self.id)
+                    print("[INFO] Iam up message recived from a new server")
 
                     room_data = []
 
@@ -318,13 +324,14 @@ class FastBully:
 
                     message = {'type' : 'view','current_cod':self.coor_id,'rooms':room_data,'ids':serverstate.ALL_USERS}
                     self.socket.send_string(json.dumps(message))  
+                    print("[INFO] View message sent")
 
                 elif req['type'] == 'Iam_Coord': 
                     #cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
-                    print("[INFO] New coordinator message received",self.coor_id)
+                    print("[INFO] New coordinator message received")
                     message = {'type' : 'updated'}
                     self.socket.send_string(json.dumps(message)) 
-                    #self.coor_id = req['id']  
+                    self.coor_id = req['id']  
                     self.update_coor(req['address'], req['port'], int(req['id']))
                     serverstate.AMICOORDINATOR = False
                     serverstate.ISCOORDINATORALIVE = True    
@@ -335,15 +342,17 @@ class FastBully:
                 elif req['type']=='nomination':
                     print("[INFO] Nomination received")
                     if req['id'] == self.id:
+                        print("[INFO] Accepted nomination")
                         message = {'type' : 'coordinator','status': "accepted"}
                         self.socket.send_string(json.dumps(message))
                         self.declare_am_coordinator()
                     else:
+                        print("[INFO] Nomination was not intended to me")
                         message = {'type' : 'coordinator','status': "rejected"}
                         self.socket.send_string(json.dumps(message))
                 
                 elif req['type'] == 'create_identity' and self.id == self.coor_id:
-                    print("[INFO] Received create_identity task")
+                    print("[INFO] Received create identity task")
                     if req["identity"] in serverstate.ALL_USERS :
                         print("[Request] Create a new identity ", req["identity"], " unsuccessful")
                         self.socket.send_string(self.msg_builder.createNewIdentity(False))
@@ -360,6 +369,8 @@ class FastBully:
                         self.socket.send_string(self.msg_builder.createNewIdentity(True)) 
 
                 elif req['type'] == 'create_chat_room' and self.id == self.coor_id:
+
+                    print("[INFO] Received create room task")
                     isRoomExist = False
                     for room in serverstate.ALL_CHAT_ROOMS:
                         if room.getChatRoomId() == req['roomid']:
@@ -406,8 +417,10 @@ class FastBully:
                     if(deleted):
                         self.task_list.append({"type" : "deleteroom","serverid": serverid,"roomid":roomid})
                         self.socket.send_string(self.msg_builder.approved(True)) 
+                        print("[INFO] Room deleted")
                     else:
                         self.socket.send_string(self.msg_builder.approved(False)) 
+                        print("[INFO] No room found with requested ID")
                 
                 elif req['type'] == 'quit' and self.id == self.coor_id:
 
@@ -429,8 +442,10 @@ class FastBully:
                     if(deleted):
                         self.task_list.append({"type" : "quit","identity": id})
                         self.socket.send_string(self.msg_builder.approved(True)) 
+                        print("[INFO] Identity deleted")
                     else:
                         self.socket.send_string(self.msg_builder.approved(False)) 
+                        print("[INFO] No identity found with requested ID")
 
                 else:
                     self.socket.send_string(self.msg_builder.errorServer())
@@ -463,19 +478,19 @@ class FastBully:
 
         cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
 
-        self.socket_all = self.context.socket(zmq.REQ)
-        self.socket_all.setsockopt(zmq.RCVTIMEO, 3000)
-        self.connect_all()
-
-        for p in range (0,len(self.processes)):
-            try:
-                print("[INFO] I am coordinator message sent")
-                self.socket_all.send_string(json.dumps(cord_msg))
-                req = self.socket_all.recv_string()
-            except Exception as e:
-                print("[INFO] No reply received")
-                print(e)
-                #continue
+        for p in self.processes:
+            if p.getId() != self.id:
+                self.socket_all = self.context.socket(zmq.REQ)
+                self.socket_all.setsockopt(zmq.RCVTIMEO, 3000)
+                self.socket_all.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort()))
+                try:
+                    print("\n[INFO] Sending I am Coordinator meesage to server with id ->",p.getId())
+                    self.socket_all.send_string(json.dumps(cord_msg))
+                    req = self.socket_all.recv_string()
+                    print("[INFO] Response Recived")
+                except Exception as e:
+                    print("[INFO] No reply received")
+                    print("[Warining] ",e)
 
 
 ############################################ CLIENT ###########################################################
@@ -540,8 +555,8 @@ class FastBully:
 
                         r = json.loads(req)
                         if r['type'] == 'view':
-                            print("view recived from Others...")
-                            print(r)
+                            print("[INFO] View message recived from a Other server")
+                            print("[INFO] Current view of the system :",r)
 
                             if view_expected:
                                 current_cord = r['current_cod']
@@ -599,8 +614,10 @@ class FastBully:
 
                     # check whether their is a task
                     if not(request['task'] == ''):
+
                         # handle create_identity task
                         if request['task']['type'] == 'create_identity':
+
                             if not(request['task']["identity"] in serverstate.ALL_USERS) :
                                 serverstate.ALL_USERS.append(request['task']["identity"])
                                 print("[INFO] Added new user {} to the ALL_USERS ".format(\
@@ -660,7 +677,7 @@ class FastBully:
                 
                 # I am up message 
                 elif (request['type'] == "IamUp"):
-                    print("[INFO] Iam message recived from a new server")
+                    print("[INFO] Iam up message recived from a new server")
 
                     room_data = []
 
@@ -669,10 +686,13 @@ class FastBully:
 
                     message = {'type' : 'view','current_cod':self.coor_id,'rooms':room_data,'ids':serverstate.ALL_USERS}
                     self.heart_socket.send_string(json.dumps(message))  
+                    print("[INFO] View message sent")
 
                 # View message
                 elif (request['type'] == "view"):
-                    print("[INFO] View message recived from Others...")
+
+                    print("[INFO] View message recived from a Other server")
+                    print("[INFO] Current view of the system :",request)
 
                     if view_expected:
 
