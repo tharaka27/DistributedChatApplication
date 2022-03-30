@@ -56,6 +56,7 @@ class joinRoomProtocolHandler:
                 
                 else:
                     #room found in a remote server
+                    print("room in a remote server")
                     current_room_instance.removeMember(self._identity)
                     serverstate.LOCAL_USERS.remove(self._identity)
                     host = ""
@@ -63,10 +64,11 @@ class joinRoomProtocolHandler:
                     for s in serverstate.REMOTE_SERVER_CONFIGURATIONS:
 
                         s_name = s.getServerName()
+                        print(s_name,r_cod)
                         if s_name == r_cod:
                             host = s.getAddress()
                             port = s.getClientPort()
-                            serverstate.LOCAL_USERS.remove(self._identity)
+                            print("its ok")
                             return "o",self._message_builder.route(self._next_room,host,port)
         
         # not found in rooms -> room does not exist
