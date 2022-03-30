@@ -41,7 +41,7 @@ def connection_handler(connection,add):
     connection.settimeout(3)
 
     while True:
-
+        print("still working ..")
         if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
             buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
                 "content" : Messages[chatroomid][local_chat_pointer][1]}
@@ -236,9 +236,9 @@ def connection_handler(connection,add):
                     response = json.dumps(response)+ "\n"
                     connection.send(response.encode('utf-8'))
                     connection.close()
-                    quit()
+                    break
                 else:
-                    print("cannot quit")
+                    print("[INFO] Cannot quit")
                     
 
         except socket.timeout:
@@ -287,18 +287,12 @@ def connection_handler(connection,add):
                                     msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
                                     msg = json.dumps(msg)+ "\n"
                                     broadcast_pool[room_id].append(msg)
-                        print("break 1")
                         break
                 
                 
-                # response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
-                # response = json.dumps(response)+ "\n"
-                # connection.send(response.encode('utf-8'))
-                # connection.close()
-                print("break 2")
                 break
             else:
-                print("cannot quit")
+                print("[INFO] Cannot quit")
 
 
 def Main():
