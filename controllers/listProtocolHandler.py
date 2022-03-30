@@ -1,63 +1,30 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.bully import Bully 
+from algorithms.fastbully import FastBully 
 import json
 import time
 
 class listProtocolHandler:
-    def __init__(self, json_data):
+    def __init__(self):
         self._protocol = "list"
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
         print("[INFO] Handling new identity request started.")
 
-        # check whether coordinator is alive
-        if not(serverstate.ISCOORDINATORALIVE):
-            return False, self._message_builder.coordinatorNotAlive(self._protocol)
+        system_rooms = []
 
-        # check whether I am coordinator
-        if serverstate.AMICOORDINATOR:
-            # the user exists
-            if self._name in serverstate.ALL_USERS :
-                print("[INFO] Handling new identity inside AMICOORDINATOR. User exists")
-                return False,self._name, self._message_builder.newIdentity("False")
+        try:
+            for room in serverstate.ALL_CHAT_ROOMS:
 
-            else:
-                print("[INFO] Handling new identity inside AMICOORDINATOR. User does not exist")
+                room_id = room.getChatRoomId()
+                system_rooms.append(room_id)
 
-                try:
-                    serverstate.ALL_USERS.append(self._name)
-                    serverstate.LOCAL_USERS.append(self._name)
-                except:
-                    print("[Error] Unexpected error")
-                # distribute it to the others
-                try:
-                    self._bully_instance.task_list.append({"type" : "create_identity", "identity":self._name})
-                except :
-                    print("[Error] Error occured while distributing the new identity")
+        except Exception as e:
+            print(e)
+        
+        return self._message_builder.listProtocol(system_rooms)
 
-                print("[INFO] FINISHED")
-                return True,self._name,self._message_builder.newIdentity("True") 
-
-        else:
-            # forward the message to the coordinator
-            print("[INFO] Forwarding the create_identity request to coordinator")
-            message = { "type" : "create_identity" , "identity" : self._name}
-            
-            self._bully_instance.send_buffer.append(message)
-
-            while(len(self._bully_instance.receive_buffer) == 0):
-                time.sleep(1)
-            
-            print("[Received]", end="")
-            message = json.loads(self._bully_instance.receive_buffer.pop(0))
-            print(message)
-            if message["approved"] == "True" :
-                serverstate.ALL_USERS.append(self._name)
-                serverstate.LOCAL_USERS.append(self._name)
-                return True,self._name,self._message_builder.newIdentity("True") 
-            else:
-                return False,self._name,self._message_builder.newIdentity("False") 
+        

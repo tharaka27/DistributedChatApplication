@@ -1,7 +1,7 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.bully import Bully 
+from algorithms.fastbully import FastBully 
 from models.localroominfo import LocalRoomInfo
 import json
 import time
@@ -11,7 +11,7 @@ class deleteRoomProtocolHandler:
         self._protocol = "deleteroom"
         self._delete_room = json_data["roomid"]
         self._identity = identity
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
         self._message_builder = MessageBuilder._instance
         self._serverid = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
         
@@ -89,8 +89,7 @@ class deleteRoomProtocolHandler:
                                         hall.addMember(m)
                             
                             # remove the room
-                            serverstate.ALL_CHAT_ROOMS.remove(self._delete_room)
-                            serverstate.LOCAL_CHAT_ROOMS.remove(self._delete_room)
+                            serverstate.LOCAL_CHAT_ROOMS.remove(r)
                             return True,members,self._message_builder.deleteRoom(self._delete_room,"true")
 
                         else:

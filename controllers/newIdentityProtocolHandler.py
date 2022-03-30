@@ -1,7 +1,7 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.bully import Bully 
+from algorithms.fastbully import FastBully 
 import json
 import time
 
@@ -9,7 +9,7 @@ class newIdentityProtocolHandler:
     def __init__(self, json_data):
         self._protocol = "newidentity"
         self._name = json_data["identity"]
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
@@ -63,7 +63,6 @@ class newIdentityProtocolHandler:
             message = json.loads(self._bully_instance.receive_buffer.pop(0))
             print(message)
             if message["approved"] == "True" :
-                serverstate.ALL_USERS.append(self._name)
                 serverstate.LOCAL_USERS.append(self._name)
                 return True,self._name,self._message_builder.newIdentity("True") 
             else:

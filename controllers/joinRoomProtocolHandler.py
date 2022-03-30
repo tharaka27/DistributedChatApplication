@@ -1,7 +1,7 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.fastbully import Bully 
+from algorithms.fastbully import FastBully 
 from models.localroominfo import LocalRoomInfo
 import json
 import time
@@ -12,7 +12,7 @@ class joinRoomProtocolHandler:
         self._next_room = json_data["roomid"]
         self._identity = identity
         self._current_room = current_room
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
@@ -50,6 +50,7 @@ class joinRoomProtocolHandler:
                 r_cod = r.getCoordinator()
                 if r_cod == serverstate.LOCAL_SERVER_CONFIGURATION.getServerName():
                     #room found in same server
+                    print(current_room_instance.getMembers())
                     current_room_instance.removeMember(self._identity)
                     r.addMember(self._identity)
                     return "b",self._message_builder.roomChange(self._identity,self._current_room,self._next_room)
@@ -58,7 +59,9 @@ class joinRoomProtocolHandler:
                     #room found in a remote server
                     print("room in a remote server")
                     current_room_instance.removeMember(self._identity)
+                    print("remove from existing room")
                     serverstate.LOCAL_USERS.remove(self._identity)
+                    print("remove from local users")
                     host = ""
                     port = ""
                     for s in serverstate.REMOTE_SERVER_CONFIGURATIONS:
@@ -68,7 +71,6 @@ class joinRoomProtocolHandler:
                         if s_name == r_cod:
                             host = s.getAddress()
                             port = s.getClientPort()
-                            print("its ok")
                             return "o",self._message_builder.route(self._next_room,host,port)
         
         # not found in rooms -> room does not exist

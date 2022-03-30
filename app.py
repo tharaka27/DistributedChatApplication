@@ -12,9 +12,10 @@ from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
 from controllers.deleteRoomProtocolHandler import deleteRoomProtocolHandler
 from controllers.quitProtocolHandler import quitProtocolHandler
+from controllers.listProtocolHandler import listProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
-from algorithms.bully import Bully
+from algorithms.fastbully import FastBully
 from controllers.JSONMessageBuilder import MessageBuilder 
 from models.localroominfo import LocalRoomInfo
 import os
@@ -127,21 +128,27 @@ def connection_handler(connection,add):
                     broadcast_pool[req['roomid']].append(response)
                     chatroomid = req['roomid']
 
-                elif broadcast == "o":
-                    broadcast_pool[chatroomid].append(response)
-                    chatroomid = req['roomid']
-                    
+                # elif broadcast == "o":
+                #     # broadcast_pool[chatroomid].append(response)
+                #     chatroomid = req['roomid']
+
+                 
                 connection.send(response.encode("utf-8"))
             
             elif operation == "who":
                 print("[INFO] WHO Request Received")
                 
-                response = messageProtocolHandler(chatroomid, )
-                
-                print(response)
+                response = whoProtocolHandler(chatroomid).handle()
 
                 response = response + "\n"
-                print(response)
+                connection.send(response.encode('utf-8'))
+            
+            elif operation == "list":
+                print("[INFO] LIST Request Received")
+                
+                response = listProtocolHandler().handle()
+
+                response = response + "\n"
                 connection.send(response.encode('utf-8'))
             
             elif operation == "message":
@@ -252,10 +259,13 @@ def connection_handler(connection,add):
             
             continue
 
+        except json.decoder.JSONDecodeError:
+            continue
+
 
         except:
             # think client send a quit message
-            print("[INFO] Quit Request Received")
+            print("[INFO] Quit Request Received in unexpected quit of client")
             state = quitProtocolHandler(identity).handle()
 
             if state:
@@ -273,20 +283,20 @@ def connection_handler(connection,add):
 
                         if broadcast:
                             for m in members:
-                                if m == identity:
-                                    continue
-                                else:
+                                if m != identity:
                                     msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
                                     msg = json.dumps(msg)+ "\n"
                                     broadcast_pool[room_id].append(msg)
+                        print("break 1")
                         break
                 
                 
-                response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
-                response = json.dumps(response)+ "\n"
-                connection.send(response.encode('utf-8'))
-                connection.close()
-                quit()
+                # response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
+                # response = json.dumps(response)+ "\n"
+                # connection.send(response.encode('utf-8'))
+                # connection.close()
+                print("break 2")
+                break
             else:
                 print("cannot quit")
 
@@ -357,7 +367,7 @@ if __name__ == "__main__":
     print("[INFO] Remote server configurations")
     print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
 
-    bully  = Bully()
+    bully  = FastBully()
     bully.run()
 
     msg = MessageBuilder.getInstance()
