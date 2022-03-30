@@ -101,7 +101,7 @@ class FastBully:
         self.heart_socket = self.heart_context.socket(zmq.PUB)
         self.heart_socket.bind('tcp://{}:{}'.format(self.address, self.heart_port))
         self.heart_socket2 = self.heart_context.socket(zmq.SUB)
-        heart_timeout = 500*random.randint(4,10)
+        heart_timeout = 500*random.randint(6,10)
         self.heart_socket2.setsockopt(zmq.RCVTIMEO, heart_timeout)
         self.connect_all_heart()
         self.heart_socket2.subscribe("")
@@ -116,6 +116,7 @@ class FastBully:
         global Fast_enabled,coord_dead,election_started, send_iamUP,view_expected, current_cord,other_servers_view,proc
 
         first_time = True
+        election_first_time = True
 
         while True:
 
@@ -175,6 +176,12 @@ class FastBully:
                                 elif (election_started):
                                     print("[INFO] Election is in process...")
                                     serverstate.ISCOORDINATORALIVE = False
+                                    try:
+                                        coor_heart_beat = self.heart_socket2.recv_string()
+                                        request = json.loads(coor_heart_beat)
+                                        self.heart_beat_queue.append(request)
+                                    except:
+                                        coord_dead =True
 
                                 # I am the first to detect the failure
                                 elif self.coor_id != self.id:
@@ -455,6 +462,10 @@ class FastBully:
 
 
         cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
+
+        self.socket_all = self.context.socket(zmq.REQ)
+        self.socket_all.setsockopt(zmq.RCVTIMEO, 3000)
+        self.connect_all()
 
         for p in range (0,len(self.processes)):
             try:
