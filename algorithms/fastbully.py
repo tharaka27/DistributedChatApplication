@@ -164,7 +164,7 @@ class FastBully:
                                 continue
                             else:
                                 if view_expected:
-                                    print("[INFO] No view message recived form others...So iam the coordinator")
+                                    print("[INFO] No view message received form others...So iam the coordinator")
                                     view_expected = False
                                     current_cord = self.id
                                     other_servers_view = True
@@ -313,10 +313,12 @@ class FastBully:
                     self.socket.send_string(json.dumps(message))  
 
                 elif req['type'] == 'Iam_Coord': 
-                    print("[INFO] New coordinator message recived",self.coor_id)
+                    #cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
+                    print("[INFO] New coordinator message received",self.coor_id)
                     message = {'type' : 'updated'}
                     self.socket.send_string(json.dumps(message)) 
-                    self.coor_id = req['id']  
+                    #self.coor_id = req['id']  
+                    self.update_coor(req['address'], req['port'], int(req['id']))
                     serverstate.AMICOORDINATOR = False
                     serverstate.ISCOORDINATORALIVE = True    
                     election_started = False
@@ -324,13 +326,13 @@ class FastBully:
                     proc = None                
                 
                 elif req['type']=='nomination':
-                    print("[INFO] Nomination recived")
+                    print("[INFO] Nomination received")
                     if req['id'] == self.id:
                         message = {'type' : 'coordinator','status': "accepted"}
                         self.socket.send_string(json.dumps(message))
                         self.declare_am_coordinator()
                     else:
-                        message = {'type' : 'coordinator','statues': "rejected"}
+                        message = {'type' : 'coordinator','status': "rejected"}
                         self.socket.send_string(json.dumps(message))
                 
                 elif req['type'] == 'create_identity' and self.id == self.coor_id:
@@ -452,16 +454,17 @@ class FastBully:
         coord_dead = False
 
 
-        cord_msg = {"type" : "Iam_Coord","id": self.id}
+        cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
 
         for p in range (0,len(self.processes)):
             try:
                 print("[INFO] I am coordinator message sent")
                 self.socket_all.send_string(json.dumps(cord_msg))
                 req = self.socket_all.recv_string()
-            except:
-                print("[INFO] No reply recived")
-                continue
+            except Exception as e:
+                print("[INFO] No reply received")
+                print(e)
+                #continue
 
 
 ############################################ CLIENT ###########################################################

@@ -16,6 +16,7 @@ from controllers.listProtocolHandler import listProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
 from algorithms.fastbully import FastBully
+from algorithms.bully import Bully
 from controllers.JSONMessageBuilder import MessageBuilder 
 from models.localroominfo import LocalRoomInfo
 import os
@@ -262,7 +263,7 @@ def connection_handler(connection,add):
         except json.decoder.JSONDecodeError:
             continue
 
-
+        '''
         except:
             # think client send a quit message
             print("[INFO] Quit Request Received in unexpected quit of client")
@@ -293,6 +294,7 @@ def connection_handler(connection,add):
                 break
             else:
                 print("[INFO] Cannot quit")
+        '''
 
 
 def Main():
@@ -300,12 +302,15 @@ def Main():
 
     s = socket.socket()         # Create a socket object
     try:
+        #s.bind((serverstate.LOCAL_SERVER_CONFIGURATION.getAddress(), \
+        #    int(os.environ.get('port'))))        # Bind to the port
         s.bind((serverstate.LOCAL_SERVER_CONFIGURATION.getAddress(), \
-            int(os.environ.get('port'))))        # Bind to the port
-    
-    except:
+            int(serverstate.LOCAL_SERVER_CONFIGURATION.getClientPort())))
+    except Exception as e:
         print("[INFO] Port is already Occupied\nShutting down the server")
-        quit()
+        print(e)
+        #quit()
+        os._exit(0)
     s.listen(20)                 # Now wait for client connection.
 
     print ('Server started!')
@@ -339,7 +344,12 @@ if __name__ == "__main__":
 
     print("[INFO] Initializing server with.....")   
     print("[INFO] Local server configuration")
-    print( serverstate.LOCAL_SERVER_CONFIGURATION )
+    print( "[CONFIG] Name             : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName() ))
+    print( "[CONFIG] Address          : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getAddress() ))
+    print( "[CONFIG] Client port      : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getClientPort() ))
+    print( "[CONFIG] Coordinator port : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getCoordinationPort() ))
+    print( "[CONFIG] Heart port       : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getHeartPort() ))
+
 
     # add main hall to the local chat room set
     print("[INFO] Creating the mainhall in the server")
@@ -362,6 +372,7 @@ if __name__ == "__main__":
     print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
 
     bully  = FastBully()
+    #bully = Bully()
     bully.run()
 
     msg = MessageBuilder.getInstance()
