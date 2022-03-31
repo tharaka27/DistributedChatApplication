@@ -488,7 +488,7 @@ class FastBully:
                     print("\n[INFO] Sending I am Coordinator meesage to server with id ->",p.getId())
                     self.socket_all.send_string(json.dumps(cord_msg))
                     req = self.socket_all.recv_string()
-                    print("[INFO] Response Recived")
+                    print("[INFO] Response Received")
                 except Exception as e:
                     print("[INFO] No reply received")
                     print("[Warining] ",e)

@@ -129,10 +129,13 @@ def connection_handler(connection,add):
                     broadcast_pool[req['roomid']].append(response)
                     chatroomid = req['roomid']
 
+                    local_chat_pointer = len(Messages[chatroomid]) - 1
+
                 # elif broadcast == "o":
                 #     # broadcast_pool[chatroomid].append(response)
                 #     chatroomid = req['roomid']
 
+                
                  
                 connection.send(response.encode("utf-8"))
             
@@ -195,14 +198,25 @@ def connection_handler(connection,add):
                 print("[INFO] Delete Room Request Received")
                 broadcast,members,response = deleteRoomProtocolHandler(identity,req).handle()
 
+                print("[INFO] " + str(members))
+
                 if broadcast:
                     for m in members:
                         msg = {"type" : "roomchange", "identity" : m, "former" : req['roomid'], "roomid" : mainHallName}
                         msg = json.dumps(msg)+ "\n"
+
+                        
                         broadcast_pool[req["roomid"]].append(msg)
+                        
+                    try:
+                        Messages.pop(req["roomid"], None)
+                        #chatroomid = mainHallName
+                    except Exception as e:
+                        print("Error" + str(e))
                 
                 response =response + "\n"
                 connection.send(response.encode('utf-8'))
+                
 
             elif operation == "quit": 
 
@@ -222,7 +236,10 @@ def connection_handler(connection,add):
                             data = {"roomid":room_id}
                             broadcast,members,response = deleteRoomProtocolHandler(identity,data).handle()
 
+                            
                             if broadcast:
+                                chatroomid = mainHallName
+                                Messages.pop(room_id, None)
                                 for m in members:
                                     if m == identity:
                                         continue
