@@ -337,7 +337,8 @@ class FastBully:
                     serverstate.ISCOORDINATORALIVE = True    
                     election_started = False
                     coord_dead = False
-                    proc = None                
+                    proc = None 
+                    print("[INFO] Coordinator updated")               
                 
                 elif req['type']=='nomination':
                     print("[INFO] Nomination received")
@@ -549,6 +550,9 @@ class FastBully:
                     try:
                         print("[INFO] Trying to send message to the coordinator ({},{})".format(\
                             address,port), message)
+
+                        self.socket_coor = self.context.socket(zmq.REQ)
+                        self.socket_coor.setsockopt(zmq.RCVTIMEO, 3000)
                         self.socket_coor.connect('tcp://{}:{}'.format(address, port))
                         self.socket_coor.send_string(json.dumps(message))
                         req = self.socket_coor.recv_string()
