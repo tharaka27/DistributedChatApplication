@@ -1,7 +1,8 @@
 from models import serverstate 
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.bully import Bully 
+#from algorithms.fastbully import FastBully 
+from algorithms.bully import Bully
 import json
 import time
 
@@ -9,7 +10,8 @@ class whoProtocolHandler:
     def __init__(self, roomid):
         self._protocol = "who"
         self._roomid = roomid
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
+        #self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
@@ -19,11 +21,10 @@ class whoProtocolHandler:
         if not(serverstate.ISCOORDINATORALIVE):
             return self._message_builder.coordinatorNotAlive(self._protocol)
 
-        identites = ["Adele", "Mary"]
+        identites = []
 
         owner = ""
         try:
-            print("ballss")
             for room in serverstate.LOCAL_CHAT_ROOMS:
                 if room.getChatRoomId() == self._roomid:
                     owner = room.getOwner()

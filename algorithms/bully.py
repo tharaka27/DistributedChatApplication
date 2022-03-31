@@ -122,8 +122,10 @@ class Bully:
                             
                             elif request['task']['type'] == 'create_chat_room':
                                 isRoomExist = False
+
+                                roomid = request['task']['roomid']
                                 for room in serverstate.ALL_CHAT_ROOMS:
-                                    if room.getChatRoomId() == self._roomid:
+                                    if room.getChatRoomId() == roomid:
                                         isRoomExist = True
                                 
                                 if not(isRoomExist):

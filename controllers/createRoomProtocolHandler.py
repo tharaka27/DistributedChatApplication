@@ -2,7 +2,8 @@ from models import serverstate
 from models.userSession import UserSession
 from models.localroominfo import LocalRoomInfo
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.bully import Bully 
+from algorithms.fastbully import FastBully 
+from algorithms.bully import Bully
 import json
 import time
 
@@ -11,7 +12,8 @@ class createRoomProtocolHandler:
         self._protocol = "createroom"
         self._identity = identity
         self._roomid = json_data["roomid"]
-        self._bully_instance = Bully._instance
+        self._bully_instance = FastBully._instance
+        #self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         self._local_server_name = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
         
@@ -95,9 +97,7 @@ class createRoomProtocolHandler:
 
                     # add to the local chat rooms list
                     serverstate.LOCAL_CHAT_ROOMS.append(chat_room_instance)
-
-                    # add to the global chat room list
-                    serverstate.ALL_CHAT_ROOMS.append(chat_room_instance)
+                    
                     return True, self._roomid, self._message_builder.newChatRoom(self._roomid,"True")  
                 else:
                     return False, self._roomid, self._message_builder.newChatRoom(self._roomid,"False") 

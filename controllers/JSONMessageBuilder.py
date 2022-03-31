@@ -106,6 +106,13 @@ class MessageBuilder:
         return json.dumps(message)
     
     def approved(self,status):
-        message = {}    
+        message = {}   
+        message["type"] = "feedback" 
         message["approved"] = status
+        return json.dumps(message)
+
+    def listProtocol(self,rooms):
+        message = {}   
+        message["type"] = "roomlist" 
+        message["rooms"] = rooms
         return json.dumps(message)

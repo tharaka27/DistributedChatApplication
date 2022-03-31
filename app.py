@@ -12,8 +12,10 @@ from controllers.moveJoinProtocolHandler import moveJoinProtocolHandler
 from controllers.messageProtocolHandler import messageProtocolHandler
 from controllers.deleteRoomProtocolHandler import deleteRoomProtocolHandler
 from controllers.quitProtocolHandler import quitProtocolHandler
+from controllers.listProtocolHandler import listProtocolHandler
 from models import serverstate
 from utilities.fileReader import FileReader
+from algorithms.fastbully import FastBully
 from algorithms.bully import Bully
 from controllers.JSONMessageBuilder import MessageBuilder 
 from models.localroominfo import LocalRoomInfo
@@ -21,6 +23,7 @@ import os
 
 global mainHallName
 global broadcast_pool
+global memberCount
 
 broadcast_pool = {}
 
@@ -29,6 +32,8 @@ Messages = {}
 def connection_handler(connection,add):
 
     connection.settimeout(3)
+    global memberCount
+    memberCount = 0
 
     identity = "" # keeps identity of the connected client
     global mainHallName
@@ -40,15 +45,19 @@ def connection_handler(connection,add):
     connection.settimeout(3)
 
     while True:
-
-        if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
-            buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
-                "content" : Messages[chatroomid][local_chat_pointer][1]}
-            buffer_json = json.dumps(buffer) + "\n"
-            local_chat_pointer = local_chat_pointer + 1
-            if not(identity == Messages[chatroomid][local_chat_pointer-1][0]):
-                connection.send(buffer_json.encode('utf-8'))
-        
+        # print("still working ..")
+        try:
+            if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
+                buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
+                    "content" : Messages[chatroomid][local_chat_pointer][1]}
+                buffer_json = json.dumps(buffer) + "\n"
+                local_chat_pointer = local_chat_pointer + 1
+                if not(identity == Messages[chatroomid][local_chat_pointer-1][0]):
+                    connection.send(buffer_json.encode('utf-8'))
+        except Exception as e:
+            print("Error " + str(e))
+            chatroomid = mainHallName   
+            bd_index = len(broadcast_pool[chatroomid]) - memberCount
         
         try:
             req = connection.recv(1024)
@@ -127,21 +136,30 @@ def connection_handler(connection,add):
                     broadcast_pool[req['roomid']].append(response)
                     chatroomid = req['roomid']
 
-                elif broadcast == "o":
-                    broadcast_pool[chatroomid].append(response)
-                    chatroomid = req['roomid']
-                    
+                    local_chat_pointer = len(Messages[chatroomid]) - 1
+
+                # elif broadcast == "o":
+                #     # broadcast_pool[chatroomid].append(response)
+                #     chatroomid = req['roomid']
+
+                
+                 
                 connection.send(response.encode("utf-8"))
             
             elif operation == "who":
                 print("[INFO] WHO Request Received")
                 
-                response = messageProtocolHandler(chatroomid, )
-                
-                print(response)
+                response = whoProtocolHandler(chatroomid).handle()
 
                 response = response + "\n"
-                print(response)
+                connection.send(response.encode('utf-8'))
+            
+            elif operation == "list":
+                print("[INFO] LIST Request Received")
+                
+                response = listProtocolHandler().handle()
+
+                response = response + "\n"
                 connection.send(response.encode('utf-8'))
             
             elif operation == "message":
@@ -187,14 +205,28 @@ def connection_handler(connection,add):
                 print("[INFO] Delete Room Request Received")
                 broadcast,members,response = deleteRoomProtocolHandler(identity,req).handle()
 
+                print("[INFO] " + str(members))
+
                 if broadcast:
+                    chatroomid = mainHallName
+                    bd_index = len(broadcast_pool[chatroomid])
+                    memberCount = len(members)
                     for m in members:
                         msg = {"type" : "roomchange", "identity" : m, "former" : req['roomid'], "roomid" : mainHallName}
                         msg = json.dumps(msg)+ "\n"
-                        broadcast_pool[req["roomid"]].append(msg)
+                        broadcast_pool[chatroomid].append(msg)
+                        
+                        #broadcast_pool[req["roomid"]].append(msg)
+                        
+                    try:
+                        Messages.pop(req["roomid"], None)
+                                    
+                    except Exception as e:
+                        print("Error" + str(e))
                 
                 response =response + "\n"
                 connection.send(response.encode('utf-8'))
+                
 
             elif operation == "quit": 
 
@@ -214,7 +246,10 @@ def connection_handler(connection,add):
                             data = {"roomid":room_id}
                             broadcast,members,response = deleteRoomProtocolHandler(identity,data).handle()
 
+                            
                             if broadcast:
+                                chatroomid = mainHallName
+                                Messages.pop(room_id, None)
                                 for m in members:
                                     if m == identity:
                                         continue
@@ -229,9 +264,9 @@ def connection_handler(connection,add):
                     response = json.dumps(response)+ "\n"
                     connection.send(response.encode('utf-8'))
                     connection.close()
-                    quit()
+                    break
                 else:
-                    print("cannot quit")
+                    print("[INFO] Cannot quit")
                     
 
         except socket.timeout:
@@ -252,10 +287,13 @@ def connection_handler(connection,add):
             
             continue
 
+        except json.decoder.JSONDecodeError:
+            continue
 
-        except:
+        except Exception as e:
+            print(e)
             # think client send a quit message
-            print("[INFO] Quit Request Received")
+            print("[INFO] Quit Request Received in unexpected quit of client")
             state = quitProtocolHandler(identity).handle()
 
             if state:
@@ -273,22 +311,16 @@ def connection_handler(connection,add):
 
                         if broadcast:
                             for m in members:
-                                if m == identity:
-                                    continue
-                                else:
+                                if m != identity:
                                     msg = {"type" : "roomchange", "identity" : m, "former" : room_id, "roomid" : mainHallName}
                                     msg = json.dumps(msg)+ "\n"
                                     broadcast_pool[room_id].append(msg)
                         break
                 
                 
-                response = {"type" : "roomchange", "identity" : identity, "former" : chatroomid, "roomid" : ""}
-                response = json.dumps(response)+ "\n"
-                connection.send(response.encode('utf-8'))
-                connection.close()
-                quit()
+                break
             else:
-                print("cannot quit")
+                print("[INFO] Cannot quit")
 
 
 def Main():
@@ -296,12 +328,15 @@ def Main():
 
     s = socket.socket()         # Create a socket object
     try:
+        #s.bind((serverstate.LOCAL_SERVER_CONFIGURATION.getAddress(), \
+        #    int(os.environ.get('port'))))        # Bind to the port
         s.bind((serverstate.LOCAL_SERVER_CONFIGURATION.getAddress(), \
-            int(os.environ.get('port'))))        # Bind to the port
-    
-    except:
+            int(serverstate.LOCAL_SERVER_CONFIGURATION.getClientPort())))
+    except Exception as e:
         print("[INFO] Port is already Occupied\nShutting down the server")
-        quit()
+        print(e)
+        #quit()
+        os._exit(0)
     s.listen(20)                 # Now wait for client connection.
 
     print ('Server started!')
@@ -335,7 +370,12 @@ if __name__ == "__main__":
 
     print("[INFO] Initializing server with.....")   
     print("[INFO] Local server configuration")
-    print( serverstate.LOCAL_SERVER_CONFIGURATION )
+    print( "[CONFIG] Name             : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName() ))
+    print( "[CONFIG] Address          : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getAddress() ))
+    print( "[CONFIG] Client port      : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getClientPort() ))
+    print( "[CONFIG] Coordinator port : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getCoordinationPort() ))
+    print( "[CONFIG] Heart port       : {} ".format(serverstate.LOCAL_SERVER_CONFIGURATION.getHeartPort() ))
+
 
     # add main hall to the local chat room set
     print("[INFO] Creating the mainhall in the server")
@@ -357,7 +397,8 @@ if __name__ == "__main__":
     print("[INFO] Remote server configurations")
     print( serverstate.REMOTE_SERVER_CONFIGURATIONS)
 
-    bully  = Bully()
+    bully  = FastBully()
+    #bully = Bully()
     bully.run()
 
     msg = MessageBuilder.getInstance()
