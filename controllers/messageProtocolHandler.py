@@ -1,6 +1,7 @@
 from models import serverstate
 from controllers.JSONMessageBuilder import MessageBuilder
-from algorithms.fastbully import FastBully 
+from algorithms.fastbully import FastBully
+from algorithms.bully import Bully
 import json
 import time
 
@@ -9,7 +10,8 @@ class messageProtocolHandler:
         self._protocol = "message"
         self._roomId = roomid
         self._content = json_data["content"]
-        self._bully_instance = FastBully._instance
+        #self._bully_instance = FastBully._instance
+        self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):

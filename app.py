@@ -263,7 +263,8 @@ def connection_handler(connection,add):
         except json.decoder.JSONDecodeError:
             continue
 
-        except:
+        except Exception as e:
+            print(e)
             # think client send a quit message
             print("[INFO] Quit Request Received in unexpected quit of client")
             state = quitProtocolHandler(identity).handle()

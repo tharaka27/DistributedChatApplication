@@ -2,6 +2,7 @@ from models import serverstate
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
 from algorithms.fastbully import FastBully 
+from algorithms.bully import Bully
 from models.localroominfo import LocalRoomInfo
 import json
 import time
@@ -11,6 +12,7 @@ class quitProtocolHandler:
         self._protocol = "quit"
         self._identity = identity
         self._bully_instance = FastBully._instance
+        #self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):

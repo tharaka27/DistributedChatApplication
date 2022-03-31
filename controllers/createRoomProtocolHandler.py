@@ -3,6 +3,7 @@ from models.userSession import UserSession
 from models.localroominfo import LocalRoomInfo
 from controllers.JSONMessageBuilder import MessageBuilder
 from algorithms.fastbully import FastBully 
+from algorithms.bully import Bully
 import json
 import time
 
@@ -12,6 +13,7 @@ class createRoomProtocolHandler:
         self._identity = identity
         self._roomid = json_data["roomid"]
         self._bully_instance = FastBully._instance
+        #self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         self._local_server_name = serverstate.LOCAL_SERVER_CONFIGURATION.getServerName()
         

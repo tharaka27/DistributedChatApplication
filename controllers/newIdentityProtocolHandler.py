@@ -2,6 +2,7 @@ from models import serverstate
 from models.userSession import UserSession
 from controllers.JSONMessageBuilder import MessageBuilder
 from algorithms.fastbully import FastBully 
+from algorithms.bully import Bully
 import json
 import time
 
@@ -10,6 +11,7 @@ class newIdentityProtocolHandler:
         self._protocol = "newidentity"
         self._name = json_data["identity"]
         self._bully_instance = FastBully._instance
+        #self._bully_instance = Bully._instance
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
