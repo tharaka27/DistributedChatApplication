@@ -23,6 +23,7 @@ import os
 
 global mainHallName
 global broadcast_pool
+global memberCount
 
 broadcast_pool = {}
 
@@ -31,6 +32,8 @@ Messages = {}
 def connection_handler(connection,add):
 
     connection.settimeout(3)
+    global memberCount
+    memberCount = 0
 
     identity = "" # keeps identity of the connected client
     global mainHallName
@@ -43,14 +46,18 @@ def connection_handler(connection,add):
 
     while True:
         # print("still working ..")
-        if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
-            buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
-                "content" : Messages[chatroomid][local_chat_pointer][1]}
-            buffer_json = json.dumps(buffer) + "\n"
-            local_chat_pointer = local_chat_pointer + 1
-            if not(identity == Messages[chatroomid][local_chat_pointer-1][0]):
-                connection.send(buffer_json.encode('utf-8'))
-        
+        try:
+            if not(ifFirstTime) and local_chat_pointer < len(Messages[chatroomid]):
+                buffer = {"type" : "message", "identity" : Messages[chatroomid][local_chat_pointer][0], \
+                    "content" : Messages[chatroomid][local_chat_pointer][1]}
+                buffer_json = json.dumps(buffer) + "\n"
+                local_chat_pointer = local_chat_pointer + 1
+                if not(identity == Messages[chatroomid][local_chat_pointer-1][0]):
+                    connection.send(buffer_json.encode('utf-8'))
+        except Exception as e:
+            print("Error " + str(e))
+            chatroomid = mainHallName   
+            bd_index = len(broadcast_pool[chatroomid]) - memberCount
         
         try:
             req = connection.recv(1024)
@@ -201,16 +208,19 @@ def connection_handler(connection,add):
                 print("[INFO] " + str(members))
 
                 if broadcast:
+                    chatroomid = mainHallName
+                    bd_index = len(broadcast_pool[chatroomid])
+                    memberCount = len(members)
                     for m in members:
                         msg = {"type" : "roomchange", "identity" : m, "former" : req['roomid'], "roomid" : mainHallName}
                         msg = json.dumps(msg)+ "\n"
-
+                        broadcast_pool[chatroomid].append(msg)
                         
-                        broadcast_pool[req["roomid"]].append(msg)
+                        #broadcast_pool[req["roomid"]].append(msg)
                         
                     try:
                         Messages.pop(req["roomid"], None)
-                        #chatroomid = mainHallName
+                                    
                     except Exception as e:
                         print("Error" + str(e))
                 
