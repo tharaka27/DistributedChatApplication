@@ -13,6 +13,7 @@ from models.localroominfo import LocalRoomInfo
 class FastBully:
 
     global Fast_enabled, coord_dead, election_started, send_iamUP, view_expected, current_cord, other_servers_view,proc
+    global room_list
     other_servers_view = False
     send_iamUP = False
     current_cord = -1
@@ -22,6 +23,7 @@ class FastBully:
     election_started = False
     _instance = None
     proc = None
+    room_list = []
 
     def __init__(self):
         if FastBully._instance != None:
@@ -96,6 +98,9 @@ class FastBully:
         self.socket_all = self.context.socket(zmq.REQ)
         self.socket_all.setsockopt(zmq.RCVTIMEO, TIMEOUT)
         self.connect_all()
+
+        self.socket_list = self.context.socket(zmq.REQ)
+        self.socket_list.setsockopt(zmq.RCVTIMEO, TIMEOUT)
 
         self.heart_context = zmq.Context()
         self.heart_socket = self.heart_context.socket(zmq.PUB)
@@ -195,7 +200,71 @@ class FastBully:
                                         serverstate.ISCOORDINATORALIVE = False
 
                                 first_time = True
-                        
+
+############################################ Get rooms for list message ########################################
+    def get_rooms(self):
+
+        alive_servers = []
+        alive_servers.append(serverstate.LOCAL_SERVER_CONFIGURATION.getServerName())
+
+        alive_p_address=""
+        alive_p_port=""
+
+        for p in self.processes:
+
+            # connect to servers and check weather they are alive
+            if p.getId() < int(self.id):
+
+                print("\n[INFO] Sending Check alive message to :",p.getId())
+                self.socket_list = self.context.socket(zmq.REQ)
+                self.socket_list.setsockopt(zmq.RCVTIMEO, 3000) #TIMEOUT
+                self.socket_list.connect('tcp://{}:{}'.format(p.getAddress(), p.getCoordinationPort() ))
+
+                list_message = {"type":"check_alive"}
+                
+
+                try:
+                    self.socket_list.send_string(json.dumps(list_message))
+                    res = self.socket_list.recv_string()
+                    response = json.loads(res)
+                    alive_servers.append(p.getServerName())
+                    alive_p_address = p.getAddress()
+                    alive_p_port = p.getCoordinationPort()
+                    print("[INFO] Recived a response for check alive message")
+
+                except Exception as e:
+                    print("[INFO] Did not recieved a rersponse for check alive message")
+                    continue
+
+        existing_rooms = []
+
+        for room in serverstate.ALL_CHAT_ROOMS:
+
+            room_server = room.getCoordinator()
+            if room_server in alive_servers:
+                existing_rooms.append(room.getChatRoomId())
+            else:
+                serverstate.ALL_CHAT_ROOMS.remove(room)
+                task = {"type":"deleteroom","serverid":room_server,"roomid":room.getChatRoomId()}
+                self.task_list.append(task)
+
+                room_members = room.getMembers()
+
+                for m in room_members:
+                    task2 = {"type":"quit","identity":m}
+                    self.task_list.append(task2)
+        
+        # add main halls
+        for s in alive_servers:
+            main_hall = "MainHall-"+s
+            existing_rooms.append(main_hall)
+        
+        print("returned")
+        return existing_rooms
+
+
+
+
 ############################################ ELECTION ###########################################################   
 
     def start_election(self):
@@ -298,7 +367,7 @@ class FastBully:
 
     def run_server(self):
 
-        global proc,election_started,coord_dead
+        global proc,election_started,coord_dead,room_list
 
         while True:
             try:
@@ -312,7 +381,13 @@ class FastBully:
                     print("[INFO] election message recived",self.id)
                     #respond alive..with id
                     message = {'type' : 'Iam_alive','id': self.id}
-                    self.socket.send_string(json.dumps(message))   
+                    self.socket.send_string(json.dumps(message)) 
+
+                elif req['type'] == 'recover':
+                    print("[INFO] Recover message recived")
+                    message = {"type":"recover_ok"}
+                    self.socket.send_string(json.dumps(message))  
+                    print("[INFO] recover ok message sent")
 
                 elif req['type'] == 'IamUp': 
                     print("[INFO] Iam up message recived from a new server")
@@ -325,6 +400,25 @@ class FastBully:
                     message = {'type' : 'view','current_cod':self.coor_id,'rooms':room_data,'ids':serverstate.ALL_USERS}
                     self.socket.send_string(json.dumps(message))  
                     print("[INFO] View message sent")
+                
+                elif req['type'] == 'check_alive':
+                    print("[INFO] Check alive message recived")    
+                    message = {"type":"Iam_alive"}
+                    self.socket.send_string(json.dumps(message))  
+                    print("[INFO] I am alive message sent")
+
+                elif req['type'] == 'get_list':
+                    print("[INFO] Get room list message recived")  
+                    room_list = self.get_rooms()
+                    reply = {"type":"list_ok"}
+                    self.socket.send_string(json.dumps(reply)) 
+                    print("[INFO] Searching rooms complete")
+                
+                elif req['type'] == 'send_list':
+                    print("[INFO] Send room list message recived")  
+                    reply = {"type":"room_list", "rooms":room_list}
+                    self.socket.send_string(json.dumps(reply)) 
+                    print("[INFO] Sent rooms list")                    
 
                 elif req['type'] == 'Iam_Coord': 
                     #cord_msg = {"type" : "Iam_Coord","id": self.id, "address":self.address, "port":self.port}
@@ -509,6 +603,7 @@ class FastBully:
                 result = self.start_election() 
                 if result:
                     coord_dead = False
+            
 
             if not(updated):
 
@@ -525,6 +620,7 @@ class FastBully:
                     view_expected = False
                     if current_cord <= self.id:
                         self.declare_am_coordinator()
+
 
             time.sleep(0.5)
 
@@ -547,51 +643,105 @@ class FastBully:
                             address = p.getAddress()
                             port = p.getCoordinationPort()
                             break
-                    try:
-                        print("[INFO] Trying to send message to the coordinator ({},{})".format(\
-                            address,port), message)
+                    
+                    print("[INFO] Trying to send message to the coordinator ({},{})".format(\
+                        address,port), message)
 
-                        self.socket_coor = self.context.socket(zmq.REQ)
-                        self.socket_coor.setsockopt(zmq.RCVTIMEO, 3000)
-                        self.socket_coor.connect('tcp://{}:{}'.format(address, port))
-                        self.socket_coor.send_string(json.dumps(message))
-                        req = self.socket_coor.recv_string()
-
-                        r = json.loads(req)
-                        if r['type'] == 'view':
-                            print("[INFO] View message recived from a Other server")
-                            print("[INFO] Current view of the system :",r)
-
-                            if view_expected:
-                                current_cord = r['current_cod']
-
-                                for room in r['rooms']:
-
-                                    room_instance = LocalRoomInfo()
-                                    room_instance.setChatRoomID(room["ChatRoomId"])
-                                    room_instance.setOwner(room["owner"])
-                                    room_instance.setCoordinator(room["coordinator"])
-                                    room_instance.setMembers(room["members"])
-                                    serverstate.ALL_CHAT_ROOMS.append(room_instance)
-                                
-                                serverstate.ALL_USERS = r["ids"]
-                                
-                                print("[INFO] Users and rooms updated from view message")
-                                other_servers_view = True
-                                view_expected = False
-
-                        else:
-                            self.receive_buffer.append(req)
-
-                        print("[INFO] Receive complete")
+                    #get list message
+                    if message['type'] == 'get_list':
                         
-                    except zmq.ZMQError as e:
-                        # try restarting the socket connection
-                        self.socket_coor.close(0)
-                        self.socket_coor = self.context.socket(zmq.REQ)
-                        self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
-                        print("[Error] {}".format(e))
-                        self.send_buffer.append(message)
+                        try:
+                            self.socket_coor = self.context.socket(zmq.REQ)
+                            self.socket_coor.setsockopt(zmq.RCVTIMEO, 3000)
+                            self.socket_coor.connect('tcp://{}:{}'.format(address, port))
+                            self.socket_coor.send_string(json.dumps(message))
+                            req = self.socket_coor.recv_string()
+
+                            r = json.loads(req)
+                            if r['type'] == 'list_ok':
+                                print("[INFO] List ok message recieved")
+                                try:
+                                    req_msg = {"type":"send_list"}
+                                    self.socket_coor.send_string(json.dumps(req_msg))
+                                    print("[INFO] Send list message sent")
+                                    res = self.socket_coor.recv_string()
+                                    print("[INFO] Rooms recived")
+                                    self.receive_buffer.append(res)
+                                except:
+                                    self.socket_coor.close(0)
+                                    self.socket_coor = self.context.socket(zmq.REQ)
+                                    self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
+                                    self.send_buffer.append(message)
+
+                            print("[INFO] Receive complete")
+                            
+                        except zmq.ZMQError as e:
+
+                            # try restarting the socket connection
+                            self.socket_coor.close(0)
+                            self.socket_coor = self.context.socket(zmq.REQ)
+                            self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
+                            self.socket_coor.connect('tcp://{}:{}'.format(address, port))
+
+                            try:
+                                print("[INFO] List ok message recieved")
+                                req_msg = {"type":"send_list"}
+                                self.socket_coor.send_string(json.dumps(req_msg))
+                                print("[INFO] Send list message sent")
+                                res = self.socket_coor.recv_string()
+                                print("[INFO] Rooms recived")
+                                self.receive_buffer.append(res)
+                            except:
+                                self.socket_coor.close(0)
+                                self.socket_coor = self.context.socket(zmq.REQ)
+                                self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
+                                self.send_buffer.append(message)
+
+                    # other types of messages
+                    else:
+
+                        try:
+                            self.socket_coor = self.context.socket(zmq.REQ)
+                            self.socket_coor.setsockopt(zmq.RCVTIMEO, 3000)
+                            self.socket_coor.connect('tcp://{}:{}'.format(address, port))
+                            self.socket_coor.send_string(json.dumps(message))
+                            req = self.socket_coor.recv_string()
+
+                            r = json.loads(req)
+                            if r['type'] == 'view':
+                                print("[INFO] View message recived from a Other server")
+                                print("[INFO] Current view of the system :",r)
+
+                                if view_expected:
+                                    current_cord = r['current_cod']
+
+                                    for room in r['rooms']:
+
+                                        room_instance = LocalRoomInfo()
+                                        room_instance.setChatRoomID(room["ChatRoomId"])
+                                        room_instance.setOwner(room["owner"])
+                                        room_instance.setCoordinator(room["coordinator"])
+                                        room_instance.setMembers(room["members"])
+                                        serverstate.ALL_CHAT_ROOMS.append(room_instance)
+                                    
+                                    serverstate.ALL_USERS = r["ids"]
+                                    
+                                    print("[INFO] Users and rooms updated from view message")
+                                    other_servers_view = True
+                                    view_expected = False
+
+                            else:
+                                self.receive_buffer.append(req)
+
+                            print("[INFO] Receive complete")
+                            
+                        except zmq.ZMQError as e:
+                            # try restarting the socket connection
+                            self.socket_coor.close(0)
+                            self.socket_coor = self.context.socket(zmq.REQ)
+                            self.socket_coor.setsockopt(zmq.RCVTIMEO, 2000)
+                            print("[Error] {}".format(e))
+                            self.send_buffer.append(message)
                 
             time.sleep(1)
 

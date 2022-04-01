@@ -14,19 +14,35 @@ class listProtocolHandler:
         self._message_builder = MessageBuilder._instance
         
     def handle(self):
-        print("[INFO] Handling new identity request started.")
+        print("[INFO] Handling List request started.")
+
+        if not(serverstate.ISCOORDINATORALIVE):
+            return self._message_builder.coordinatorNotAlive(self._protocol)
 
         system_rooms = []
 
-        try:
-            for room in serverstate.ALL_CHAT_ROOMS:
-
-                room_id = room.getChatRoomId()
-                system_rooms.append(room_id)
-
-        except Exception as e:
-            print(e)
+        if serverstate.AMICOORDINATOR:
+            print("[INFO] Handling delete inside AMICOORDINATOR.")
+            system_rooms = self._bully_instance.get_rooms()
+            return self._message_builder.listProtocol(system_rooms)
         
-        return self._message_builder.listProtocol(system_rooms)
+        else:
+
+            # forward the message to the coordinator
+            print("[INFO] Forwarding the deleteroom request to coordinator")
+            request = {"type":"get_list"}
+            self._bully_instance.send_buffer.append(request)
+
+            while(len(self._bully_instance.receive_buffer) == 0):
+                time.sleep(1)
+                        
+            print("[Received]", end="")
+            message = json.loads(self._bully_instance.receive_buffer.pop(0))
+            print(message)
+            if message["type"] == "room_list":
+
+                system_rooms = message["rooms"]
+
+            return self._message_builder.listProtocol(system_rooms)
 
         
