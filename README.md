@@ -9,7 +9,25 @@ The module depends on following external libraries. For correct configuration pl
 
 ## To execute the server
 
+When executing the server it will read the configuration.txt file in the project directory which contains configurations about the distributed servers. So before the execution of the server change the server configurations acoordingly (We have configured 6 chat servers).
+
+Configuration file data format is,
+* serverID ServerIP ClientPort  CoordinationPort ID
+
+  - ServerID - Identity name of the server.
+
+  - ServerIP - IP of the server
+
+  - ClientPort - Port which clients connect to the server
+
+  - CoordinationPort - Port used by servers to communicate between them
+
+  - ID - Priority number when electing leaders
+
+* When you have configured the configuration file, you can execute the below command.
+
 ```python3 app.py```
+
 
 ### Distributed chat server application
 In this project, we had to implement a distributed chat client application. Overall systems consist mainly of two parts as server and the client. The scope of the project was to implement the server component of the system. The server is a distributed system where chat clients can connect to an existing server. An individual server is responsible for managing a subset of chat clients. Because clients are connected to a single server, if a client wants to join a chat room located in another server, redirecting of chat clients between the servers is required. And also having unique client and chat room identities across the whole system is also important. 
