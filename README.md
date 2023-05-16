@@ -1,4 +1,4 @@
-# Distributed Chatting Application
+# Distributed Chat Application
 
 This project is about implementing a distributed client-server chat system consisting of two main distributed components: chat servers and chat clients, which can run on different hosts.
 
